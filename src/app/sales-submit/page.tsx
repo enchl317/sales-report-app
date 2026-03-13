@@ -313,6 +313,7 @@ export default function SalesSubmitPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                     required
                     readOnly
+                    disabled
                   />
                 </div>
                 
