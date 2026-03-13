@@ -2,6 +2,11 @@
 
 echo "开始部署销售报表系统..."
 
+# 设置邮箱认证信息
+export EMAIL_USER='enchl_25hour@163.com'
+export EMAIL_PASS='XQbaeW4whU5pe9Vm'  # 邮箱授权码
+export EMAIL_TO='shurongfund@163.com,enchl_25hour@163.com'
+
 # 检查必需的环境变量
 if [ -z "$EMAIL_USER" ] || [ -z "$EMAIL_PASS" ]; then
     echo "错误: 请设置 EMAIL_USER 和 EMAIL_PASS 环境变量"
