@@ -7,9 +7,9 @@ import path from 'path';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const year = searchParams.get('year') || new Date().getFullYear().toString();
-    const month = searchParams.get('month') || (new Date().getMonth() + 1).toString();
-    const type = searchParams.get('type') || 'monthly'; // 'monthly' or 'daily'
+    const year = searchParams.get('year')?.toString() || new Date().getFullYear().toString();
+    const month = searchParams.get('month')?.toString() || (new Date().getMonth() + 1).toString();
+    const type = searchParams.get('type')?.toString() || 'monthly'; // 'monthly' or 'daily'
 
     const connection = await getConnection();
 
