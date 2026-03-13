@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getDailySalesData, getTodayExcelFiles } from '@/lib/email-service';
 
+// 禁用静态生成，标记为动态路由
+export const dynamic = 'force-dynamic';
+
 export async function POST() {
   try {
     // 获取当日销售数据

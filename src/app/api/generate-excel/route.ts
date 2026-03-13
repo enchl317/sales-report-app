@@ -4,6 +4,9 @@ import { utils, write } from 'xlsx';
 import fs from 'fs/promises';
 import path from 'path';
 
+// 禁用静态生成，标记为动态路由
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

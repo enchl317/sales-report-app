@@ -20,7 +20,7 @@ export async function getDailySalesData(todayStr?: string) {
 
   // 准備Excel數據
   const excelData = [
-    ['门店', '门店简称', '日期', '总销售额', '肉松销售额', '其他销售额', '上报人']
+    ['门店简称', '日期', '总销售额', '肉松销售额', '其他销售额', '上报人']
   ];
 
   let totalSalesSum = 0; // 计算总销售额
@@ -36,7 +36,6 @@ export async function getDailySalesData(todayStr?: string) {
     totalSalesSum += totalSales;
     
     excelData.push([
-      row.store_name,
       row.store_short_name,
       new Date(row.report_date).toLocaleDateString(),
       totalSales,

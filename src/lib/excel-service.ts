@@ -21,7 +21,7 @@ export async function generateDailySalesReportData(todayStr?: string) {
 
   // 准備Excel數據
   const excelData = [
-    ['门店', '门店简称', '日期', '总销售额', '肉松销售额', '其他销售额', '上报人']
+    ['门店简称', '日期', '总销售额', '肉松销售额', '其他销售额', '上报人']
   ];
 
   (rows as any[]).forEach((row: any) => {
@@ -32,7 +32,6 @@ export async function generateDailySalesReportData(todayStr?: string) {
         : row.reporter_names || '';
     
     excelData.push([
-      row.store_name,
       row.store_short_name,
       new Date(row.report_date).toLocaleDateString(),
       parseFloat(row.total_sales),
