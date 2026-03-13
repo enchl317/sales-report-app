@@ -7,7 +7,7 @@ async function updateDbStructure() {
     
     const connection = await mysql.createConnection({
       host: 'localhost',
-      user: 'root',
+      user: 'enchl',
       password: '12345678',
       port: 3306,
       database: 'sales_report_db'

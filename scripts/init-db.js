@@ -8,7 +8,7 @@ async function initDatabase() {
     // 首先连接到 MySQL 服务器（不指定数据库）
     const connection = await mysql.createConnection({
       host: 'localhost',
-      user: 'root',
+      user: 'enchl',
       password: '12345678',
       port: 3306
     });
@@ -81,11 +81,11 @@ async function initDatabase() {
     console.log('表创建成功，正在插入初始数据...');
     
     // 删除现有数据（按依赖顺序）
-    await connection.query('DELETE FROM store_sales_records;');
-    await connection.query('DELETE FROM sales_reports;');
-    await connection.query('DELETE FROM user_stores;');
-    await connection.query('DELETE FROM users;');
-    await connection.query('DELETE FROM stores;');
+    //await connection.query('DELETE FROM store_sales_records;');
+    //await connection.query('DELETE FROM sales_reports;');
+    //await connection.query('DELETE FROM user_stores;');
+    //await connection.query('DELETE FROM users;');
+    //await connection.query('DELETE FROM stores;');
     
     // 插入门店数据（更新后的门店信息）
     const storesData = [

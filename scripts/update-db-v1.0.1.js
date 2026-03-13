@@ -9,7 +9,7 @@ async function updateDatabase() {
     // 连接到 MySQL 服务器
     const connection = await mysql.createConnection({
       host: 'localhost',
-      user: 'root',
+      user: 'enchl',
       password: '12345678',
       port: 3306,
       database: 'sales_report_db'
