@@ -32,7 +32,7 @@ sleep 5
 
 # 启动网页服务（带环境变量）
 echo "启动网页服务..."
-PORT=3000 nohup EMAIL_USER="$EMAIL_USER" EMAIL_PASS="$EMAIL_PASS" EMAIL_TO="$EMAIL_TO" npm start > web.log 2>&1 &
+nohup env PORT=3000 EMAIL_USER="$EMAIL_USER" EMAIL_PASS="$EMAIL_PASS" EMAIL_TO="$EMAIL_TO" npm start > web.log 2>&1 &
 WEB_PID=$!
 echo "网页服务PID: $WEB_PID"
 
