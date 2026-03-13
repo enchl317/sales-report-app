@@ -303,11 +303,12 @@ export default function SalesSubmitPage() {
                 )}
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="reportDate" className="block text-sm font-medium text-gray-700 mb-1">
                     报告日期
                   </label>
                   <input
                     type="text"
+                    id="reportDate"
                     value={new Date(formData.reportDate).toLocaleDateString('zh-CN')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
                     required
