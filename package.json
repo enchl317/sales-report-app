@@ -1,12 +1,15 @@
 {
   "name": "sales-report-app",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "门店销售报告管理系统",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "init-db": "node scripts/init-db.js",
+    "update-db": "node scripts/update-db-v1.0.1.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",

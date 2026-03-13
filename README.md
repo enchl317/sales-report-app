@@ -1,143 +1,123 @@
-# 门店销售报告系统
+# 门店销售报告管理系统
 
-这是一个为6家门店运营人员设计的移动端销售报告系统，用于上报每日销售数据。
+版本: 1.0.0
+
+## 项目概述
+
+这是一个为门店运营人员设计的移动优先的销售报告管理系统，支持每日销售数据录入、历史数据查看、统计分析和月度目标管理。
 
 ## 功能特性
 
-- 用户身份认证
-- 门店选择功能
-- 销售数据填报（总销售额、现金、刷卡、线上销售额、顾客数量等）
-- 历史报告查看
-- 数据统计与分析（管理员/经理可见）
-- 移动端友好界面
+### 核心功能
+- **用户认证**: 支持员工和管理员角色
+- **门店管理**: 支持6家门店（南东店、杨浦店、中环店、三鑫店、全土店、汇联店）
+- **销售数据录入**: 支持日常销售报告提交
+- **数据可视化**: 年度销售汇总，按门店和月份查看
+- **月度目标管理**: 设置和跟踪月度销售目标
+- **达成率计算**: 自动计算销售目标达成率
 
-## 技术栈
-
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- Ant Design Mobile
-- Node.js (后端API)
+### 技术栈
+- **前端**: Next.js 14 (App Router)
+- **后端**: Node.js + Next.js API Routes
+- **数据库**: MySQL
+- **样式**: Tailwind CSS
+- **UI组件**: 原生HTML组件（优化性能）
 
 ## 环境要求
 
-- Node.js (版本 18 或更高)
+- Node.js 18+
+- MySQL 8.0+
 - npm 或 yarn
 
-## 安装和运行
+## 快速开始
 
-### 安装 Node.js
-
-如果尚未安装 Node.js，请按以下步骤操作：
-
-**对于 macOS（使用 Homebrew）：**
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install node
-```
-
-**从官网下载：**
-访问 [Node.js 官网](https://nodejs.org/) 下载 LTS 版本并安装。
-
-**验证安装：**
-```bash
-node --version
-npm --version
-```
-
-### 开发环境
-
-1. 安装依赖：
+### 1. 安装依赖
 ```bash
 npm install
-# 或
-yarn install
 ```
 
-2. 启动开发服务器：
+### 2. 配置环境变量
+创建 `.env.local` 文件：
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=12345678
+DB_NAME=sales_report_db
+DB_PORT=3306
+```
+
+### 3. 初始化数据库
+```bash
+npm run init-db
+```
+
+### 4. 启动开发服务器
 ```bash
 npm run dev
-# 或
-yarn dev
 ```
 
-3. 访问 http://localhost:3000
-
-### 生产环境
-
-1. 构建应用：
+### 5. 构建生产版本
 ```bash
 npm run build
-```
-
-2. 启动生产服务器：
-```bash
 npm start
 ```
-
-## 用户账户
-
-系统预设了以下账户：
-
-**门店员工账户：**
-- store1_staff / password123
-- store2_staff / password123
-- ...
-- store6_staff / password123
-
-**门店经理账户：**
-- store1_manager / password123
-- store2_manager / password123
-- ...
-- store6_manager / password123
-
-**管理员账户：**
-- admin / password123
-
-## 页面说明
-
-- `/` - 销售报告填报页面
-- `/history` - 历史报告查看页面
-- `/stats` - 数据统计页面（仅管理员和经理可见）
-- `/login` - 登录页面
-
-## API 接口
-
-- `POST /api/sales-report` - 提交销售报告
-- `GET /api/sales-report` - 获取销售报告列表
-- `DELETE /api/sales-report` - 删除销售报告
 
 ## 项目结构
 
 ```
 src/
-├── app/                 # 页面路由
-│   ├── login/           # 登录页面
-│   ├── history/         # 历史页面
-│   └── stats/           # 统计页面
-├── components/          # 可复用组件
-├── lib/                 # 工具函数
-└── app/                 # 全局布局和样式
+├── app/                    # Next.js 应用页面
+│   ├── api/               # API 路由
+│   ├── login/             # 登录页面
+│   ├── sales-submit/      # 销售提交页面
+│   ├── yearly-sales/      # 年度销售页面
+│   ├── monthly-targets/   # 月度目标页面
+│   └── ...
+├── components/            # React 组件
+├── lib/                   # 工具函数和库
+└── ...
+scripts/
+├── init-db.js             # 数据库初始化脚本
+└── update-db-v1.0.1.js    # 数据库更新脚本模板
 ```
+
+## API 接口
+
+- `POST /api/auth/login` - 用户登录
+- `GET /api/stores` - 获取门店列表
+- `POST /api/sales-report` - 提交销售报告
+- `GET /api/yearly-sales` - 获取年度销售数据
+- `GET/POST /api/monthly-targets` - 月度目标管理
 
 ## 部署
 
-### 部署到 Vercel
+### 生产环境部署
+1. 构建应用: `npm run build`
+2. 启动应用: `npm start`
+3. 使用 PM2 管理进程: `pm2 start npm --name "sales-report-app" -- start`
 
-1. 将项目推送到 GitHub/GitLab/Bitbucket
-2. 在 Vercel 中导入项目
-3. 点击部署
+### 反向代理配置
+推荐使用 Nginx 进行反向代理配置。
 
-### 本地部署
+## 更新策略
 
-```bash
-npm install
-npm run build
-npm start
-```
+### 数据库更新
+- 新增数据库变更应使用独立的更新脚本
+- 不得修改 `init-db.js` 初始化脚本
+- 更新脚本命名规则: `update-db-vX.Y.Z.js`
 
-## 注意事项
+### 版本控制
+- 遵循语义化版本控制 (SemVer)
+- 重大变更需创建分支开发
 
-- 当前版本使用内存存储，生产环境需替换为真实数据库
-- 密码验证为简化实现，生产环境需使用加密存储
-- 用户权限控制为演示目的，生产环境需完善权限体系
+## 维护
+
+### 数据库备份
+定期备份数据库以确保数据安全。
+
+### 监控
+使用 PM2 监控应用运行状态。
+
+## 许可证
+
+[MIT License](LICENSE)
