@@ -16,6 +16,11 @@ out/
 temp/
 report/
 
+# Additional ignored files
+server.js
+changes.patch
+tsconfig.tsbuildinfo
+
 # OS generated files
 .DS_Store
 .DS_Store?
