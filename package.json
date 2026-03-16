@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "init-db": "node scripts/init-db.js",
-    "update-db": "node scripts/update-db-v1.0.1.js"
+    "update-db": "node scripts/update-db-v1.1.0.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",

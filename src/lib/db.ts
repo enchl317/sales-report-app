@@ -8,27 +8,37 @@ const dbConfig = {
   port: parseInt(process.env.DB_PORT || '3306'),
   // 连接池配置
   waitForConnections: true,
-  connectionLimit: 10,        // 最大连接数
-  maxIdle: 5,                // 最大空闲连接数
+  connectionLimit: 15,        // 增加最大连接数
+  maxIdle: 10,               // 增加最大空闲连接数
   queueLimit: 0,             // 连接队列限制，0表示无限制
-  acquireTimeout: 60000,     // 获取连接超时时间（毫秒）
-  timeout: 60000,            // 查询超时时间（毫秒）
+  acquireTimeout: 30000,     // 获取连接超时时间（毫秒）- 减少超时时间
+  timeout: 30000,            // 查询超时时间（毫秒）- 减少超时时间
   reconnect: true,           // 自动重连
   // 防止连接超时的配置
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  // 连接健康检查
-  pingInterval: 30000,       // 每30秒ping一次连接
   // 连接池清理
-  idleTimeout: 60000,        // 空闲连接超时时间
-  createTimeout: 30000,      // 创建连接超时时间
+  idleTimeout: 30000,        // 减少空闲连接超时时间
+  createTimeout: 10000,      // 创建连接超时时间
   destroyTimeout: 5000,      // 销毁连接超时时间
+  // 额外配置以处理连接问题
+  connectTimeout: 10000,     // 连接超时
+  queueTimeout: 30000,       // 队列超时
+  initializationTimeout: 10000, // 初始化超时
+  pingInterval: 15000,       // 减少ping间隔
+  maxPreparedStatements: 500, // 最大预处理语句数
+  charset: 'utf8mb4',
+  timezone: '+08:00',        // 设置时区
+  dateStrings: true,         // 日期作为字符串返回
+  supportBigNumbers: true,
+  bigNumberStrings: true,
 };
 
 class DatabaseManager {
   private pool: mysql.Pool | null = null;
   private lastResetTime: number = 0;
-  private readonly resetCooldown: number = 5000; // 5秒冷却时间
+  private readonly resetCooldown: number = 10000; // 增加冷却时间到10秒
+  private healthCheckInterval: NodeJS.Timeout | null = null;
 
   async getPool(): Promise<mysql.Pool> {
     if (!this.pool) {
@@ -41,7 +51,7 @@ class DatabaseManager {
     // 检查是否在冷却时间内
     const now = Date.now();
     if (now - this.lastResetTime < this.resetCooldown) {
-      console.log('连接池重置在冷却时间内，跳过重置');
+      console.log(`连接池重置在冷却时间内，跳过重置。距离下次重置还需 ${this.resetCooldown - (now - this.lastResetTime)} ms`);
       return;
     }
 
@@ -56,6 +66,7 @@ class DatabaseManager {
       } finally {
         this.pool = null;
         this.lastResetTime = Date.now();
+        console.log('连接池已重置');
       }
     }
   }
@@ -64,19 +75,69 @@ class DatabaseManager {
   async testConnection(): Promise<boolean> {
     try {
       const pool = await this.getPool();
-      await pool.query('SELECT 1');
-      return true;
+      const [rows] = await pool.execute('SELECT 1 as test') as [any[], any];
+      return rows && rows.length > 0;
     } catch (error) {
       console.error('数据库连接测试失败:', error);
       return false;
+    }
+  }
+  
+  // 启动健康检查
+  startHealthCheck() {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+    }
+    
+    this.healthCheckInterval = setInterval(async () => {
+      try {
+        await this.testConnection();
+        console.log('数据库连接健康检查通过');
+      } catch (error) {
+        console.error('数据库连接健康检查失败:', error);
+      }
+    }, 30000); // 每30秒检查一次
+  }
+  
+  // 停止健康检查
+  stopHealthCheck() {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
     }
   }
 }
 
 const dbManager = new DatabaseManager();
 
+// 启动健康检查
+dbManager.startHealthCheck();
+
+// 在应用退出时清理
+process.on('SIGINT', () => {
+  console.log('收到 SIGINT 信号，正在清理数据库连接...');
+  dbManager.stopHealthCheck();
+  if (dbManager['pool']) {
+    dbManager['pool'].end()
+      .then(() => console.log('数据库连接池已关闭'))
+      .catch(err => console.error('关闭连接池时出错:', err));
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('收到 SIGTERM 信号，正在清理数据库连接...');
+  dbManager.stopHealthCheck();
+  if (dbManager['pool']) {
+    dbManager['pool'].end()
+      .then(() => console.log('数据库连接池已关闭'))
+      .catch(err => console.error('关闭连接池时出错:', err));
+  }
+  process.exit(0);
+});
+
 /**
- * 执行数据库查询，带重试机制
+ * 执行数据库查询，带重试机制和连接验证
  * @param sql SQL查询语句
  * @param params 查询参数
  * @param retries 重试次数，默认3次
@@ -86,6 +147,18 @@ export async function query(sql: string, params?: any[], retries: number = 3): P
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const pool = await dbManager.getPool();
+      
+      // 在执行查询前验证连接
+      if (attempt > 0) { // 只在重试时验证连接
+        try {
+          await pool.query('SELECT 1');
+        } catch (validationError) {
+          console.log('连接验证失败，重置连接池');
+          await dbManager.resetPoolIfNeeded(validationError as Error);
+          continue; // 重新获取连接池并重试
+        }
+      }
+      
       const [rows] = await pool.execute(sql, params);
       return rows as any[];
     } catch (error) {
@@ -99,11 +172,17 @@ export async function query(sql: string, params?: any[], retries: number = 3): P
            error.message.includes('ECONNRESET') ||
            error.message.includes('PROTOCOL_CONNECTION_LOST') ||
            error.message.includes('read ECONNRESET') ||
-           error.message.includes('write ECONNRESET'))) {
+           error.message.includes('write ECONNRESET') ||
+           error.message.includes('Handshake') ||
+           error.message.includes('connect ETIMEDOUT') ||
+           error.message.includes('connect ECONNREFUSED') ||
+           error.message.includes('Unable to set initial connection') ||
+           error.message.includes('This socket has been ended by the other party'))) {
         
         if (attempt < retries) {
-          console.log(`等待1秒后重试...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const delay = Math.pow(2, attempt) * 1000; // 指数退避
+          console.log(`等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
           
           // 尝试重置连接池
           if (attempt >= Math.floor(retries / 2)) { // 在一半尝试后重置连接池
@@ -125,7 +204,7 @@ export async function query(sql: string, params?: any[], retries: number = 3): P
 }
 
 /**
- * 执行事务，带重试机制
+ * 执行事务，带重试机制和连接验证
  * @param transactionCallback 事务回调函数
  * @param retries 重试次数，默认3次
  * @returns Promise<any>
@@ -136,7 +215,24 @@ export async function transaction<T>(transactionCallback: (connection: mysql.Poo
     let connection: mysql.PoolConnection | null = null;
     
     try {
+      // 在获取连接前验证连接池
+      if (attempt > 0) {
+        try {
+          await pool.query('SELECT 1');
+        } catch (validationError) {
+          console.log('连接验证失败，重置连接池');
+          await dbManager.resetPoolIfNeeded(validationError as Error);
+          continue; // 重新获取连接池并重试
+        }
+      }
+      
       connection = await pool.getConnection();
+      
+      // 检查连接是否有效
+      if (!connection) {
+        throw new Error('无法获取数据库连接');
+      }
+      
       await connection.beginTransaction();
       const result = await transactionCallback(connection);
       await connection.commit();
@@ -161,11 +257,17 @@ export async function transaction<T>(transactionCallback: (connection: mysql.Poo
            error.message.includes('ECONNRESET') ||
            error.message.includes('PROTOCOL_CONNECTION_LOST') ||
            error.message.includes('read ECONNRESET') ||
-           error.message.includes('write ECONNRESET'))) {
+           error.message.includes('write ECONNRESET') ||
+           error.message.includes('Handshake') ||
+           error.message.includes('connect ETIMEDOUT') ||
+           error.message.includes('connect ECONNREFUSED') ||
+           error.message.includes('Unable to set initial connection') ||
+           error.message.includes('This socket has been ended by the other party'))) {
         
         if (attempt < retries) {
-          console.log(`等待1秒后重试事务...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const delay = Math.pow(2, attempt) * 1000; // 指数退避
+          console.log(`等待 ${delay}ms 后重试事务...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
           
           // 尝试重置连接池
           if (attempt >= Math.floor(retries / 2)) {
@@ -180,7 +282,11 @@ export async function transaction<T>(transactionCallback: (connection: mysql.Poo
       }
     } finally {
       if (connection) {
-        connection.release(); // 释放连接回连接池
+        try {
+          connection.release(); // 释放连接回连接池
+        } catch (releaseError) {
+          console.error('释放连接时出错:', releaseError);
+        }
       }
     }
   }
@@ -194,4 +300,22 @@ export async function transaction<T>(transactionCallback: (connection: mysql.Poo
  */
 export async function checkConnection(): Promise<boolean> {
   return await dbManager.testConnection();
+}
+
+/**
+ * 关闭数据库连接池
+ * @returns Promise<void>
+ */
+export async function closePool(): Promise<void> {
+  dbManager.stopHealthCheck();
+  if (dbManager['pool']) {
+    try {
+      await dbManager['pool'].end();
+      console.log('数据库连接池已关闭');
+    } catch (error) {
+      console.error('关闭连接池时出错:', error);
+    } finally {
+      dbManager['pool'] = null;
+    }
+  }
 }
