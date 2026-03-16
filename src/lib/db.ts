@@ -166,16 +166,18 @@ export async function query(sql: string, params?: any[], retries: number = 5): P
            error.message.includes('Unable to set initial connection') ||
            error.message.includes('This socket has been ended by the other party') ||
            error.message.includes('Can\'t add new command when connection is in closed state') ||
-           error.message.includes('Connection lost:'))) {
+           error.message.includes('Connection lost:') ||
+           error.message.includes('Fatal error encountered during command execution'))) {
         
         if (attempt < retries) {
-          const delay = Math.min(Math.pow(2, attempt) * 1000, 10000); // 最大延迟10秒
+          const delay = Math.min(Math.pow(2, attempt) * 500, 5000); // 最大延迟5秒，更快重试
           console.log(`等待 ${delay}ms 后重试...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           
           // 如果是连接关闭错误，立即重置连接池
           if (error.message.includes('Can\'t add new command when connection is in closed state') || 
-              error.message.includes('Connection lost:')) {
+              error.message.includes('Connection lost:') ||
+              error.message.includes('Fatal error encountered during command execution')) {
             await dbManager.resetPool();
           } else if (attempt >= Math.floor(retries / 2)) {
             // 在一半尝试后重置连接池
@@ -261,16 +263,18 @@ export async function transaction<T>(transactionCallback: (connection: mysql.Poo
            error.message.includes('Unable to set initial connection') ||
            error.message.includes('This socket has been ended by the other party') ||
            error.message.includes('Can\'t add new command when connection is in closed state') ||
-           error.message.includes('Connection lost:'))) {
+           error.message.includes('Connection lost:') ||
+           error.message.includes('Fatal error encountered during command execution'))) {
         
         if (attempt < retries) {
-          const delay = Math.min(Math.pow(2, attempt) * 1000, 10000); // 最大延迟10秒
+          const delay = Math.min(Math.pow(2, attempt) * 500, 5000); // 最大延迟5秒，更快重试
           console.log(`等待 ${delay}ms 后重试事务...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           
           // 如果是连接关闭错误，立即重置连接池
           if (error.message.includes('Can\'t add new command when connection is in closed state') || 
-              error.message.includes('Connection lost:')) {
+              error.message.includes('Connection lost:') ||
+              error.message.includes('Fatal error encountered during command execution')) {
             await dbManager.resetPool();
           } else if (attempt >= Math.floor(retries / 2)) {
             // 在一半尝试后重置连接池
