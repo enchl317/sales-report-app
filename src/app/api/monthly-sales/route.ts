@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // 使用 request.nextUrl 替代 new URL(request.url) 以避免静态生成错误
+    const { searchParams } = request.nextUrl;
     const storeId = searchParams.get('storeId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

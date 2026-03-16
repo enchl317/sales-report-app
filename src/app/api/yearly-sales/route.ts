@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // 使用 request.nextUrl 替代 new URL(request.url) 以避免静态生成错误
+    const { searchParams } = request.nextUrl;
     const year = searchParams.get('year') || new Date().getFullYear().toString();
 
     // 查询指定年份的所有销售记录

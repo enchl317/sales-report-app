@@ -4,7 +4,8 @@ import { query } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // 使用 request.nextUrl 替代 new URL(request.url) 以避免静态生成错误
+    const { searchParams } = request.nextUrl;
     const month = searchParams.get('month'); // 格式应为 YYYY-MM
 
     if (!month) {

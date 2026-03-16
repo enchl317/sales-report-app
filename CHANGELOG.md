@@ -23,6 +23,7 @@
 
 ### 修复问题
 - 修复API端点中使用 `transaction` 函数导致的保存失败问题
+- 修复Next.js静态生成错误：将 `new URL(request.url)` 替换为 `request.nextUrl` 以避免动态服务器使用错误
 - 优化数据库连接管理，提高系统稳定性
 
 ### 文档更新

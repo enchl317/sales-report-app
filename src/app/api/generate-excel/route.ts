@@ -9,7 +9,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    // 使用 request.nextUrl 替代 new URL(request.url) 以避免静态生成错误
+    const { searchParams } = request.nextUrl;
     const year = searchParams.get('year')?.toString() || new Date().getFullYear().toString();
     const month = searchParams.get('month')?.toString() || (new Date().getMonth() + 1).toString();
     const type = searchParams.get('type')?.toString() || 'monthly'; // 'monthly' or 'daily'
