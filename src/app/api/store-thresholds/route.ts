@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// 强制动态渲染，避免静态生成错误
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
