@@ -1,5 +1,5 @@
 import { write } from 'xlsx';
-import { getConnection } from './db';
+import { query } from './db';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -7,9 +7,7 @@ import path from 'path';
 export async function generateDailySalesReportData(todayStr?: string) {
   const date = todayStr || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-  const connection = await getConnection();
-
-  const query = `
+  const querySql = `
     SELECT ssr.*, s.name as store_name, s.short_name as store_short_name
     FROM store_sales_records ssr
     LEFT JOIN stores s ON ssr.store_id = s.id
@@ -17,7 +15,7 @@ export async function generateDailySalesReportData(todayStr?: string) {
     ORDER BY ssr.store_id, ssr.report_date
   `;
 
-  const [rows] = await connection.execute(query, [date]) as [any[], any];
+  const rows = await query(querySql, [date]);
 
   // 准備Excel數據
   const excelData = [
@@ -50,9 +48,7 @@ export async function generateMonthlySalesReportData(year?: number, month?: numb
   const reportYear = year || now.getFullYear();
   const reportMonth = month || (now.getMonth() + 1); // 月份从0开始，需要+1
 
-  const connection = await getConnection();
-
-  const query = `
+  const querySql = `
     SELECT ssr.*, s.name as store_name, s.short_name as store_short_name
     FROM store_sales_records ssr
     LEFT JOIN stores s ON ssr.store_id = s.id
@@ -60,7 +56,7 @@ export async function generateMonthlySalesReportData(year?: number, month?: numb
     ORDER BY ssr.report_date, ssr.store_id
   `;
 
-  const [rows] = await connection.execute(query, [reportYear, reportMonth]) as [any[], any];
+  const rows = await query(querySql, [reportYear, reportMonth]);
 
   // 按日期和门店整理数据
   const dailySales: Record<string, Record<string, any>> = {};

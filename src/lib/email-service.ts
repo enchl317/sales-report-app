@@ -1,4 +1,4 @@
-import { getConnection } from '@/lib/db';
+import { query } from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -6,9 +6,7 @@ import path from 'path';
 export async function getDailySalesData(todayStr?: string) {
   const date = todayStr || new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-  const connection = await getConnection();
-
-  const query = `
+  const querySql = `
     SELECT ssr.*, s.name as store_name, s.short_name as store_short_name
     FROM store_sales_records ssr
     LEFT JOIN stores s ON ssr.store_id = s.id
@@ -16,7 +14,7 @@ export async function getDailySalesData(todayStr?: string) {
     ORDER BY ssr.store_id, ssr.report_date
   `;
 
-  const [rows] = await connection.execute(query, [date]) as [any[], any];
+  const rows = await query(querySql, [date]);
 
   // 准備Excel數據
   const excelData = [

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { query } from '@/lib/db';
 import { utils, write } from 'xlsx';
 import fs from 'fs/promises';
 import path from 'path';
@@ -14,9 +14,6 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month')?.toString() || (new Date().getMonth() + 1).toString();
     const type = searchParams.get('type')?.toString() || 'monthly'; // 'monthly' or 'daily'
 
-    const connection = await getConnection();
-
-    let query = '';
     let fileName = '';
 
     if (type === 'daily') {
@@ -25,7 +22,7 @@ export async function GET(request: NextRequest) {
       const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
       fileName = `dailysales${todayStr.replace(/-/g, '')}.xlsx`;
 
-      query = `
+      const querySql = `
         SELECT ssr.*, s.name as store_name, s.short_name as store_short_name
         FROM store_sales_records ssr
         LEFT JOIN stores s ON ssr.store_id = s.id
@@ -33,7 +30,7 @@ export async function GET(request: NextRequest) {
         ORDER BY ssr.store_id, ssr.report_date
       `;
 
-      const [rows] = await connection.execute(query, [todayStr]) as [any[], any];
+      const rows = await query(querySql, [todayStr]);
 
       // 准備Excel數據
       const excelData = [
@@ -86,7 +83,7 @@ export async function GET(request: NextRequest) {
       // 生成当月销售汇总
       fileName = `monthlysales_${year}_${month.padStart(2, '0')}.xlsx`;
 
-      query = `
+      const querySql = `
         SELECT ssr.*, s.name as store_name, s.short_name as store_short_name
         FROM store_sales_records ssr
         LEFT JOIN stores s ON ssr.store_id = s.id
@@ -94,7 +91,7 @@ export async function GET(request: NextRequest) {
         ORDER BY ssr.report_date, ssr.store_id
       `;
 
-      const [rows] = await connection.execute(query, [parseInt(year), parseInt(month)]) as [any[], any];
+      const rows = await query(querySql, [parseInt(year), parseInt(month)]);
 
       // 按日期和门店整理数据
       const dailySales: Record<string, Record<string, any>> = {};

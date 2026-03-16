@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { query, transaction } from '@/lib/db';
 // 强制动态渲染，避免静态生成错误
 export const dynamic = 'force-dynamic';
 
@@ -15,16 +15,14 @@ export async function GET(request: NextRequest) {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-
-    const connection = await getConnection();
     
-    const query = `
+    const querySql = `
       SELECT store_id, target_amount
       FROM monthly_targets
       WHERE year = ? AND month = ?
     `;
     
-    const [rows] = await connection.execute(query, [parseInt(year), parseInt(month)]);
+    const rows = await query(querySql, [parseInt(year), parseInt(month)]);
     
     return new Response(JSON.stringify(rows), {
       status: 200,
@@ -49,36 +47,26 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-
-    const connection = await getConnection();
     
-    // 开始事务
-    await connection.beginTransaction();
-    
-    try {
+    await transaction(async (connection) => {
       for (const target of targets) {
         const { storeId, targetAmount } = target;
         
         // 使用 INSERT ... ON DUPLICATE KEY UPDATE 来处理插入或更新
-        const query = `
+        const querySql = `
           INSERT INTO monthly_targets (store_id, year, month, target_amount)
           VALUES (?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE target_amount = ?
         `;
         
-        await connection.execute(query, [storeId, year, month, targetAmount, targetAmount]);
+        await connection.execute(querySql, [storeId, year, month, targetAmount, targetAmount]);
       }
+    });
       
-      await connection.commit();
-      
-      return new Response(
-        JSON.stringify({ message: '月度目标保存成功' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    }
+    return new Response(
+      JSON.stringify({ message: '月度目标保存成功' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('保存月度目标失败:', error);
     return new Response(
