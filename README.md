@@ -89,6 +89,7 @@ scripts/
 - `/yearly-sales` - 年度销售数据汇总页面
 - `/monthly-targets` - 月度目标管理页面
 - `/monthly-target-management` - 门店月度销售阈值标准维护页面
+- `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
 - `/employee-sales-stats` - 员工销售额统计页面
 - `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
 - `/history` - 历史销售记录页面
@@ -102,6 +103,7 @@ scripts/
 - `POST /api/sales-report` - 提交销售报告
 - `GET /api/yearly-sales` - 获取年度销售数据
 - `GET/POST /api/monthly-targets` - 月度目标管理
+- `GET/POST /api/store-thresholds` - 门店月度销售阈值标准管理
 - `GET/POST /api/employee-store-wages` - 员工门店销售工资百分比标准管理
 - `GET /api/users` - 获取用户列表
 - `GET /api/store-sales` - 获取门店销售记录
@@ -122,6 +124,11 @@ scripts/
 - 新增数据库变更应使用独立的更新脚本
 - 不得修改 `init-db.js` 初始化脚本
 - 更新脚本命名规则: `update-db-vX.Y.Z.js`
+- 新增 `employee_store_wage_standards` 表，用于存储员工门店销售工资百分比标准
+- 提供 `scripts/init-employee-store-wage-table.js` 脚本初始化表结构和基础数据
+- 新增 `store_monthly_thresholds` 表，用于存储门店月度销售阈值标准
+- 提供 `scripts/init-store-thresholds-table.js` 脚本创建新表并初始化数据
+- 提供 `scripts/reset-monthly-targets.js` 脚本重置月度销售目标数据
 
 ### 版本控制
 - 遵循语义化版本控制 (SemVer)

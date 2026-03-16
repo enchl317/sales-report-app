@@ -21,9 +21,25 @@
 - 新增 `employee_store_wage_standards` 表，用于存储员工门店销售工资百分比标准
 - 提供 `scripts/init-employee-store-wage-table.js` 脚本初始化表结构和基础数据
 
+### 架构优化
+- **数据模型分离** - 将"门店月度销售阈值标准"与"门店销售目标"分离为两个独立的概念
+  - 新增 `store_monthly_thresholds` 表，专门存储门店月度销售阈值标准
+  - 提供 `scripts/init-store-thresholds-table.js` 脚本创建新表并初始化数据
+  - 提供 `GET/POST /api/store-thresholds` API端点管理门店月度销售阈值标准
+  - 新增 `/monthly-threshold-management` 页面专门维护门店月度销售阈值标准
+  - 保持 `monthly_targets` 表用于门店销售目标，用于 `/yearly-sales` 页面统计
+
+### 数据更新
+- **重置月度销售目标** - 更新 `monthly_targets` 表中2026年1-3月的销售目标数据
+  - 2026年1月目标：南京东路第一食品55万、五角场店10万、百联中环店10万、三鑫世界商厦店8万、全国土特产店13万、汇联商厦店20万
+  - 2026年2月目标：南京东路第一食品90万、五角场店15万、百联中环店15万、三鑫世界商厦店10万、全国土特产店15万、汇联商厦店30万
+  - 2026年3月目标：南京东路第一食品43万、五角场店13万、百联中环店7万、三鑫世界商厦店6万、全国土特产店13万、汇联商厦店18万
+  - 提供 `scripts/reset-monthly-targets.js` 脚本用于重置月度目标数据
+
 ### 修复问题
 - 修复API端点中使用 `transaction` 函数导致的保存失败问题
 - 修复Next.js静态生成错误：将 `new URL(request.url)` 替换为 `request.nextUrl` 以避免动态服务器使用错误
+- 为API路由添加 `export const dynamic = 'force-dynamic'` 声明，确保正确处理动态请求
 - 优化数据库连接管理，提高系统稳定性
 
 ### 文档更新

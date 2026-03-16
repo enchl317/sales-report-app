@@ -2,10 +2,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
 
+// 强制动态渲染，避免静态生成错误
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
-    // 查询所有月度目标
-    const targets = await query(`
+    const { searchParams } = request.nextUrl;
+    const year = searchParams.get('year');
+    const month = searchParams.get('month');
+
+    let sql = `
       SELECT 
         mt.id,
         mt.store_id,
@@ -17,8 +23,25 @@ export async function GET(request: NextRequest) {
         mt.updated_at
       FROM monthly_targets mt
       LEFT JOIN stores s ON mt.store_id = s.id
-      ORDER BY mt.year DESC, mt.month DESC, s.id ASC
-    `);
+    `;
+    
+    const params: any[] = [];
+    
+    if (year && month) {
+      sql += ` WHERE mt.year = ? AND mt.month = ?`;
+      params.push(parseInt(year), parseInt(month));
+    } else if (year) {
+      sql += ` WHERE mt.year = ?`;
+      params.push(parseInt(year));
+    } else if (month) {
+      sql += ` WHERE mt.month = ?`;
+      params.push(parseInt(month));
+    }
+    
+    sql += ` ORDER BY mt.year DESC, mt.month DESC, s.id ASC`;
+    
+    // 查询月度目标
+    const targets = await query(sql, params);
     
     return NextResponse.json({ 
       success: true, 

@@ -82,11 +82,11 @@ const EmployeeSalesStatsPage: React.FC = () => {
       if (response.data.success) {
         const records: StoreSaleRecord[] = response.data.records;
         
-        // 获取月度销售目标
-        const monthlyTargetsResponse = await axios.get('/api/monthly-targets');
-        let monthlyTargets = [];
-        if (monthlyTargetsResponse.data.success) {
-          monthlyTargets = monthlyTargetsResponse.data.targets;
+        // 获取门店月度销售阈值标准
+        const storeThresholdsResponse = await axios.get('/api/store-thresholds');
+        let storeThresholds = [];
+        if (storeThresholdsResponse.data.success) {
+          storeThresholds = storeThresholdsResponse.data.thresholds;
         }
         
         // 找到选中员工的信息
@@ -172,20 +172,20 @@ const EmployeeSalesStatsPage: React.FC = () => {
               
               if (record.store_id === 1 || record.store_id === 5) { // 南东店(1)和杨浦店(5)
                 // 南东和杨浦店：汇总两店的销售阈值标准
-                const nanDongTarget = monthlyTargets.find(
+                const nanDongTarget = storeThresholds.find(
                   (target: any) => target.store_id === 1 && target.year == year && target.month == month
                 );
-                const yangPuTarget = monthlyTargets.find(
+                const yangPuTarget = storeThresholds.find(
                   (target: any) => target.store_id === 5 && target.year == year && target.month == month
                 );
                 
-                storeMonthlyTarget = (nanDongTarget?.target_amount || 0) + (yangPuTarget?.target_amount || 0);
+                storeMonthlyTarget = (nanDongTarget?.threshold_amount || 0) + (yangPuTarget?.threshold_amount || 0);
               } else {
                 // 其他门店：只取本门店的销售阈值标准
-                const target = monthlyTargets.find(
+                const target = storeThresholds.find(
                   (target: any) => target.store_id === record.store_id && target.year == year && target.month == month
                 );
-                storeMonthlyTarget = target?.target_amount || 0;
+                storeMonthlyTarget = target?.threshold_amount || 0;
               }
               
               storeSummaryMap[record.store_id] = {
