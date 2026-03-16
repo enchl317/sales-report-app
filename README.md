@@ -1,6 +1,6 @@
 # 门店销售报告管理系统
 
-版本: 1.0.0
+版本: 1.2.0
 
 ## 项目概述
 
@@ -81,6 +81,20 @@ scripts/
 └── update-db-v1.0.1.js    # 数据库更新脚本模板
 ```
 
+## 页面功能
+
+### 管理页面
+- `/login` - 用户登录页面
+- `/sales-submit` - 销售数据提交页面
+- `/yearly-sales` - 年度销售数据汇总页面
+- `/monthly-targets` - 月度目标管理页面
+- `/monthly-target-management` - 门店月度销售阈值标准维护页面
+- `/employee-sales-stats` - 员工销售额统计页面
+- `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
+- `/history` - 历史销售记录页面
+- `/stats` - 销售数据统计分析页面
+- `/debug` - 系统调试页面
+
 ## API 接口
 
 - `POST /api/auth/login` - 用户登录
@@ -88,6 +102,9 @@ scripts/
 - `POST /api/sales-report` - 提交销售报告
 - `GET /api/yearly-sales` - 获取年度销售数据
 - `GET/POST /api/monthly-targets` - 月度目标管理
+- `GET/POST /api/employee-store-wages` - 员工门店销售工资百分比标准管理
+- `GET /api/users` - 获取用户列表
+- `GET /api/store-sales` - 获取门店销售记录
 
 ## 部署
 

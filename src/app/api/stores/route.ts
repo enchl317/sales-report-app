@@ -1,18 +1,25 @@
 // src/app/api/stores/route.ts
-import { NextRequest } from 'next/server';
-import { query } from '../../../lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    // 获取所有门店信息
-    const stores = await query('SELECT id, name, short_name, address FROM stores ORDER BY id');
+    // 查询所有门店
+    const stores = await query('SELECT id, name, short_name FROM stores ORDER BY id ASC');
     
-    return Response.json({ 
+    return NextResponse.json({ 
       success: true, 
-      stores: stores
+      stores: stores.map((store: any) => ({
+        id: store.id,
+        name: store.name,
+        short_name: store.short_name
+      })) 
     });
   } catch (error) {
     console.error('获取门店列表失败:', error);
-    return Response.json({ success: false, message: '获取门店列表失败' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : '获取门店列表失败' 
+    }, { status: 500 });
   }
 }

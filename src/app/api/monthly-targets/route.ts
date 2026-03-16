@@ -1,77 +1,77 @@
-import { NextRequest } from 'next/server';
+// src/app/api/monthly-targets/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { query, transaction } from '@/lib/db';
-// 强制动态渲染，避免静态生成错误
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const year = searchParams.get('year');
-    const month = searchParams.get('month');
-
-    if (!year || !month) {
-      return new Response(
-        JSON.stringify({ error: '缺少年份或月份参数' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // 查询所有月度目标
+    const targets = await query(`
+      SELECT 
+        mt.id,
+        mt.store_id,
+        s.name as store_name,
+        mt.year,
+        mt.month,
+        mt.target_amount,
+        mt.created_at,
+        mt.updated_at
+      FROM monthly_targets mt
+      LEFT JOIN stores s ON mt.store_id = s.id
+      ORDER BY mt.year DESC, mt.month DESC, s.id ASC
+    `);
     
-    const querySql = `
-      SELECT store_id, target_amount
-      FROM monthly_targets
-      WHERE year = ? AND month = ?
-    `;
-    
-    const rows = await query(querySql, [parseInt(year), parseInt(month)]);
-    
-    return new Response(JSON.stringify(rows), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+    return NextResponse.json({ 
+      success: true, 
+      targets: targets.map((target: any) => ({
+        id: target.id,
+        store_id: target.store_id,
+        store_name: target.store_name,
+        year: target.year,
+        month: target.month,
+        target_amount: parseFloat(target.target_amount),
+        created_at: target.created_at,
+        updated_at: target.updated_at
+      })) 
     });
   } catch (error) {
-    console.error('获取月度目标失败:', error);
-    return new Response(
-      JSON.stringify({ error: '获取月度目标失败' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    console.error('获取月度目标数据失败:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : '获取月度目标数据失败' 
+    }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { year, month, targets } = await request.json();
+    const body = await request.json();
+    const { storeId, year, month, targetAmount } = body;
 
-    if (!year || !month || !Array.isArray(targets)) {
-      return new Response(
-        JSON.stringify({ error: '缺少必要参数' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!storeId || !year || !month || targetAmount === undefined || targetAmount < 0) {
+      return NextResponse.json({ 
+        success: false, 
+        message: '参数不完整或销售阈值不能为负数' 
+      }, { status: 400 });
     }
-    
-    await transaction(async (connection) => {
-      for (const target of targets) {
-        const { storeId, targetAmount } = target;
-        
-        // 使用 INSERT ... ON DUPLICATE KEY UPDATE 来处理插入或更新
-        const querySql = `
-          INSERT INTO monthly_targets (store_id, year, month, target_amount)
-          VALUES (?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE target_amount = ?
-        `;
-        
-        await connection.execute(querySql, [storeId, year, month, targetAmount, targetAmount]);
-      }
+
+    // 检查是否已存在相同记录，如果存在则更新，否则插入
+    const result = await query(`
+      INSERT INTO monthly_targets (store_id, year, month, target_amount) 
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+      target_amount = VALUES(target_amount),
+      updated_at = CURRENT_TIMESTAMP
+    `, [storeId, year, month, targetAmount]);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: '月度目标保存成功' 
     });
-      
-    return new Response(
-      JSON.stringify({ message: '月度目标保存成功' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
   } catch (error) {
     console.error('保存月度目标失败:', error);
-    return new Response(
-      JSON.stringify({ error: '保存月度目标失败' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return NextResponse.json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : '保存月度目标失败' 
+    }, { status: 500 });
   }
 }

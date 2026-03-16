@@ -1,36 +1,29 @@
-# Changelog
+# 更新日志
 
-All notable changes to this project will be documented in this file.
+## v1.2.0 (2026-03-16)
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### 新增功能
+- **员工门店销售工资百分比标准维护页面** - 新增 `/employee-store-wage-management` 页面，用于维护每个员工在每个门店的销售工资百分比标准
+  - 支持设置高于销售目标和低于销售目标两种工资百分比标准
+  - 支持批量初始化员工门店工资数据
+  - 提供API端点 `GET/POST /api/employee-store-wages` 进行数据管理
 
-## [Unreleased]
+### 功能改进
+- **员工销售额统计页面** - 增强 `/employee-sales-stats` 页面功能
+  - 将"统计结果"标题改为"员工销售统计"
+  - 在统计区域增加总出勤数显示（该员工在当月的销售上报中出现的记录数总和）
+  - 在统计区域增加预算工资显示（该员工在各个店的销售额乘以该员工在各店的目前执行工资百分比的乘积之和）
+  - 将总销售额、总出勤数、预算工资三个字段在同一行左、中、右位置显示
+  - 在各门店销售额汇总中增加出勤数、门店总销售额、销售阈值标准和目前执行工资百分比字段
+  - 对南东店和杨浦店进行特殊处理：门店总销售额和销售阈值标准为两店数据之和
 
-## [1.0.0] - 2026-03-13
+### 数据库更新
+- 新增 `employee_store_wage_standards` 表，用于存储员工门店销售工资百分比标准
+- 提供 `scripts/init-employee-store-wage-table.js` 脚本初始化表结构和基础数据
 
-### Added
-- 用户认证系统，支持员工和管理员角色
-- 门店管理功能，支持6家门店（南东店、杨浦店、中环店、三鑫店、全土店、汇联店）
-- 销售数据录入功能，支持日常销售报告提交
-- 年度销售汇总页面，支持按门店和月份查看销售数据
-- 月度目标管理功能，支持设置和查看月度销售目标
-- 达成率计算和显示功能
-- 响应式设计，支持移动端访问
-- 数据库初始化脚本，包含完整的表结构和初始数据
-- API 接口，支持前后端分离架构
+### 修复问题
+- 修复API端点中使用 `transaction` 函数导致的保存失败问题
+- 优化数据库连接管理，提高系统稳定性
 
-### Changed
-- 从 antd-mobile 迁移到原生 HTML 组件以提高性能
-- 优化数据库查询性能
-- 改进错误处理机制
-
-### Fixed
-- 解决了模块解析错误（buffer, tls 等）
-- 修复了认证逻辑中的错误处理
-- 修复了数据库事务支持问题
-- 修复了重复提交数据的问题
-
-### Security
-- 实施参数化查询防止 SQL 注入
-- 加强密码哈希处理
+### 文档更新
+- 更新README.md，添加新页面和API端点说明
