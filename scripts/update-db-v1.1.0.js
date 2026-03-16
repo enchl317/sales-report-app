@@ -77,7 +77,7 @@ async function updateDatabase() {
       { date: '2026-03-11', employees: ['赵璟', '倪冬平', '陈娇娇'] }
     ];
     
-    // 更新三鑫店（storeId=3）的销售记录
+    // 更新三鑫店（storeId=2）的销售记录
     const sanxinUpdates = [
       { date: '2026-03-01', employee: '陈云' },
       { date: '2026-03-02', employee: '梁庆珍' },
@@ -107,7 +107,7 @@ async function updateDatabase() {
       { date: '2026-03-11', employee: '严伟华' }
     ];
     
-    // 更新汇联店（storeId=2）的销售记录
+    // 更新汇联店（storeId=3）的销售记录
     const huilianUpdates = [
       { date: '2026-03-01', employees: ['李琴琴', '谭辉'] },
       { date: '2026-03-02', employees: ['谭辉', '谭珍爱'] },
@@ -226,7 +226,7 @@ async function updateDatabase() {
         SET 
           reporter_ids = ?,
           reporter_names = ?
-        WHERE store_id = 3 AND report_date = ?
+        WHERE store_id = 2 AND report_date = ?
       `, [
         JSON.stringify([employeeId]),
         JSON.stringify([update.employee]),
@@ -286,7 +286,7 @@ async function updateDatabase() {
         SET 
           reporter_ids = ?,
           reporter_names = ?
-        WHERE store_id = 2 AND report_date = ?
+        WHERE store_id = 3 AND report_date = ?
       `, [
         JSON.stringify(employeeIds),
         JSON.stringify(employeeNames),
