@@ -8,23 +8,23 @@ const dbConfig = {
   port: parseInt(process.env.DB_PORT || '3306'),
   // 连接池配置
   waitForConnections: true,
-  connectionLimit: 5,         // 减少连接数，避免过多连接导致问题
-  maxIdle: 3,                 // 减少最大空闲连接数
+  connectionLimit: 10,        // 增加连接数
+  maxIdle: 5,                 // 增加最大空闲连接数
   queueLimit: 0,              // 连接队列限制，0表示无限制
-  acquireTimeout: 30000,      // 获取连接超时时间（毫秒）
-  timeout: 30000,             // 查询超时时间（毫秒）
+  acquireTimeout: 60000,      // 增加获取连接超时时间（毫秒）
+  timeout: 60000,             // 增加查询超时时间（毫秒）
   reconnect: true,            // 自动重连
   // 防止连接超时的配置
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   // 连接池清理
-  idleTimeout: 20000,         // 缩短空闲连接超时时间
-  createTimeout: 10000,       // 创建连接超时时间
-  destroyTimeout: 5000,       // 销毁连接超时时间
+  idleTimeout: 60000,         // 增加空闲连接超时时间
+  createTimeout: 30000,       // 增加创建连接超时时间
+  destroyTimeout: 10000,      // 增加销毁连接超时时间
   // 额外配置以处理连接问题
-  connectTimeout: 10000,      // 连接超时
-  queueTimeout: 30000,        // 队列超时
-  initializationTimeout: 10000, // 初始化超时
+  connectTimeout: 60000,      // 增加连接超时
+  queueTimeout: 60000,        // 增加队列超时
+  initializationTimeout: 30000, // 增加初始化超时
   charset: 'utf8mb4',
   timezone: '+08:00',         // 设置时区
   dateStrings: true,          // 日期作为字符串返回
@@ -33,8 +33,8 @@ const dbConfig = {
   // 重要：禁用连接池内部的自动ping，避免冲突
   pingInterval: undefined,
   // 重要：设置合理的超时值
-  readTimeout: 30000,
-  writeTimeout: 30000,
+  readTimeout: 60000,
+  writeTimeout: 60000,
 };
 
 class DatabaseManager {
@@ -135,14 +135,12 @@ export async function query(sql: string, params?: any[], retries: number = 5): P
       // 在每次尝试前都获取新的连接池实例
       pool = await dbManager.getPool();
       
-      // 执行查询前先测试连接，但只在重试时测试
-      if (attempt > 0) {
-        const isConnected = await dbManager.testConnection();
-        if (!isConnected) {
-          console.log('连接不可用，重置连接池');
-          await dbManager.resetPool();
-          pool = await dbManager.getPool(); // 重新获取连接池
-        }
+      // 每次查询前都测试连接（不仅仅是重试时）
+      const isConnected = await dbManager.testConnection();
+      if (!isConnected) {
+        console.log('连接不可用，重置连接池');
+        await dbManager.resetPool();
+        pool = await dbManager.getPool(); // 重新获取连接池
       }
       
       // 执行查询
