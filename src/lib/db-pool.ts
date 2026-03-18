@@ -1,6 +1,5 @@
 import mysql from 'mysql2/promise';
 
-// 使用连接池来管理数据库连接，解决长时间运行后连接断开的问题
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'enchl',
@@ -15,8 +14,8 @@ const pool = mysql.createPool({
   // 连接池配置
   connectionLimit: 10,        // 最大连接数
   queueLimit: 0,             // 最大排队数，0表示无限制
-  connectTimeout: 60000,     // 连接超时
   acquireTimeout: 60000,     // 获取连接的超时时间
+  connectTimeout: 60000,     // 连接超时
   timeout: 60000,            // 查询超时时间
   reconnect: true,           // 自动重连
   // 连接空闲超时时间，防止连接被MySQL服务器关闭
