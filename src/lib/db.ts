@@ -7,22 +7,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '12345678',
   database: process.env.DB_NAME || 'sales_report_db',
   port: parseInt(process.env.DB_PORT || '3306'),
-  charset: 'utf8mb4',
-  timezone: '+08:00',
-  dateStrings: true,
-  supportBigNumbers: true,
-  bigNumberStrings: true,
   // 连接池配置
   connectionLimit: 10,        // 最大连接数
-  queueLimit: 0,             // 最大排队数，0表示无限制
-  connectTimeout: 60000,     // 连接超时
-  acquireTimeout: 60000,     // 获取连接的超时时间
-  timeout: 60000,            // 查询超时时间
-  reconnect: true,           // 自动重连
-  // 连接空闲超时时间，防止连接被MySQL服务器关闭
-  idleTimeout: 60000,        // 60秒空闲超时
-  // MySQL连接配置
-  enableKeepAlive: true,
 });
 
 // 定义可能的连接错误
