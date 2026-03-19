@@ -41,36 +41,43 @@ function isConnectionError(error: unknown): boolean {
   return false;
 }
 
-export async function query(sql: string, params?: any[], retries: number = 3): Promise<any[]> {
+// 重试函数，用于处理连接错误
+async function executeWithRetry<T>(
+  operation: () => Promise<T>,
+  retries: number = 3
+): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const [rows] = await pool.execute(sql, params);
-      return rows as any[];
+      return await operation();
     } catch (error) {
-      console.error(`数据库查询错误 (尝试 ${attempt + 1}/${retries + 1}):`, error);
+      console.error(`数据库操作错误 (尝试 ${attempt + 1}/${retries + 1}):`, error);
       
       if (isConnectionError(error)) {
         if (attempt < retries) {
           const delay = Math.min(Math.pow(2, attempt) * 1000, 5000); // 指数退避，最多5秒
           console.log(`等待 ${delay}ms 后重试...`);
           await new Promise(resolve => setTimeout(resolve, delay));
-        } else {
-          throw error;
+          continue;
         }
-      } else {
-        throw error;
       }
+      throw error;
     }
   }
   
-  throw new Error('查询失败，已达到最大重试次数');
+  throw new Error('操作失败，已达到最大重试次数');
+}
+
+export async function query(sql: string, params?: any[]): Promise<any[]> {
+  return executeWithRetry(async () => {
+    const [rows] = await pool.execute(sql, params);
+    return rows as any[];
+  });
 }
 
 export async function transaction<T>(
-  transactionCallback: (connection: mysql.PoolConnection) => Promise<T>,
-  retries: number = 3
+  transactionCallback: (connection: mysql.PoolConnection) => Promise<T>
 ): Promise<T> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  return executeWithRetry(async () => {
     let connection: mysql.PoolConnection | null = null;
     
     try {
@@ -81,7 +88,7 @@ export async function transaction<T>(
       await connection.commit();
       return result;
     } catch (error) {
-      console.error(`事务执行错误 (尝试 ${attempt + 1}/${retries + 1}):`, error);
+      console.error(`事务执行错误:`, error);
       
       if (connection) {
         try {
@@ -91,25 +98,13 @@ export async function transaction<T>(
         }
       }
       
-      if (isConnectionError(error)) {
-        if (attempt < retries) {
-          const delay = Math.min(Math.pow(2, attempt) * 1000, 5000);
-          console.log(`等待 ${delay}ms 后重试事务...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        } else {
-          throw error;
-        }
-      } else {
-        throw error;
-      }
+      throw error;
     } finally {
       if (connection) {
         connection.release(); // 释放连接回连接池
       }
     }
-  }
-  
-  throw new Error('事务失败，已达到最大重试次数');
+  });
 }
 
 export async function checkConnection(): Promise<boolean> {
