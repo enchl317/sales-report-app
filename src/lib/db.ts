@@ -32,11 +32,16 @@ const connectionErrors = [
   'PROTOCOL_ENQUEUE_ALREADY_IN_USE',
   'Lost connection',
   'Deadlock found when trying to get lock',
+  'MySQL server has gone away',
+  'Connection lost during query',
+  'Invalid Connection after sleep'
 ];
 
 function isConnectionError(error: unknown): boolean {
   if (error instanceof Error) {
-    return connectionErrors.some(err => error.message.toLowerCase().includes(err.toLowerCase()));
+    return connectionErrors.some(err => 
+      error.message.toLowerCase().includes(err.toLowerCase())
+    );
   }
   return false;
 }
@@ -67,6 +72,7 @@ async function executeWithRetry<T>(
   throw new Error('操作失败，已达到最大重试次数');
 }
 
+// 查询函数，包含连接验证
 export async function query(sql: string, params?: any[]): Promise<any[]> {
   return executeWithRetry(async () => {
     const [rows] = await pool.execute(sql, params);
@@ -74,6 +80,7 @@ export async function query(sql: string, params?: any[]): Promise<any[]> {
   });
 }
 
+// 事务函数，包含连接验证
 export async function transaction<T>(
   transactionCallback: (connection: mysql.PoolConnection) => Promise<T>
 ): Promise<T> {
@@ -129,8 +136,14 @@ export async function closePool(): Promise<void> {
 // 定期ping连接以保持活跃
 setInterval(async () => {
   try {
-    await pool.query('SELECT 1');
-    console.log('数据库连接健康检查通过');
+    // 尝试获取连接并验证
+    const connection = await pool.getConnection();
+    try {
+      await connection.query('SELECT 1');
+      console.log('数据库连接健康检查通过');
+    } finally {
+      connection.release(); // 确保连接被释放
+    }
   } catch (error) {
     console.error('数据库连接健康检查失败:', error);
   }
