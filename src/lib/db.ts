@@ -1,15 +1,23 @@
 import mysql from 'mysql2/promise';
 
-// 使用连接池来管理数据库连接，解决长时间运行后连接断开的问题
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'enchl',
-  password: process.env.DB_PASSWORD || '12345678',
-  database: process.env.DB_NAME || 'sales_report_db',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  // 连接池配置
-  connectionLimit: 10,        // 最大连接数
-});
+// 创建连接池实例
+let pool: mysql.Pool;
+
+// 初始化连接池
+function initializePool() {
+  pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'enchl',
+    password: process.env.DB_PASSWORD || '12345678',
+    database: process.env.DB_NAME || 'sales_report_db',
+    port: parseInt(process.env.DB_PORT || '3306'),
+    // 连接池配置
+    connectionLimit: 10,        // 最大连接数
+  });
+}
+
+// 初始化连接池
+initializePool();
 
 // 定义可能的连接错误
 const connectionErrors = [
@@ -34,7 +42,10 @@ const connectionErrors = [
   'Deadlock found when trying to get lock',
   'MySQL server has gone away',
   'Connection lost during query',
-  'Invalid Connection after sleep'
+  'Invalid Connection after sleep',
+  'Connection was closed by the server',
+  'Connection lost during handshake',
+  'Connection lost prior to handshake'
 ];
 
 function isConnectionError(error: unknown): boolean {
@@ -44,6 +55,21 @@ function isConnectionError(error: unknown): boolean {
     );
   }
   return false;
+}
+
+// 重建连接池
+async function rebuildPool(): Promise<void> {
+  console.log('正在重建数据库连接池...');
+  try {
+    if (pool) {
+      await pool.end(); // 关闭现有连接池
+    }
+  } catch (error) {
+    console.error('关闭旧连接池时出错:', error);
+  }
+  
+  initializePool(); // 重新初始化连接池
+  console.log('数据库连接池重建完成');
 }
 
 // 重试函数，用于处理连接错误
@@ -62,6 +88,12 @@ async function executeWithRetry<T>(
           const delay = Math.min(Math.pow(2, attempt) * 1000, 5000); // 指数退避，最多5秒
           console.log(`等待 ${delay}ms 后重试...`);
           await new Promise(resolve => setTimeout(resolve, delay));
+          
+          // 如果是连接错误，尝试重建连接池
+          if (attempt === retries - 1) { // 在最后一次重试前重建连接池
+            console.log('即将重建连接池以解决连接问题...');
+            await rebuildPool();
+          }
           continue;
         }
       }
@@ -141,10 +173,25 @@ setInterval(async () => {
     try {
       await connection.query('SELECT 1');
       console.log('数据库连接健康检查通过');
+    } catch (error) {
+      console.error('健康检查失败，尝试重建连接池:', error);
+      await rebuildPool();
     } finally {
-      connection.release(); // 确保连接被释放
+      try {
+        connection.release(); // 确保连接被释放
+      } catch (releaseError) {
+        console.error('释放连接时出错:', releaseError);
+      }
     }
   } catch (error) {
-    console.error('数据库连接健康检查失败:', error);
+    console.error('健康检查获取连接失败，尝试重建连接池:', error);
+    try {
+      await rebuildPool();
+    } catch (rebuildError) {
+      console.error('重建连接池失败:', rebuildError);
+    }
   }
 }, 30000); // 每30秒检查一次
+
+// 导出池对象以便外部使用（如果需要）
+export { pool };
