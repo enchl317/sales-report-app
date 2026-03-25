@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dayjs from 'dayjs';
 import axios from 'axios';
 
@@ -39,6 +40,7 @@ interface User {
 }
 
 const EmployeeSalesStatsPage: React.FC = () => {
+  const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<User[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -56,6 +58,21 @@ const EmployeeSalesStatsPage: React.FC = () => {
         const response = await axios.get('/api/users'); // 假设有一个API获取用户列表
         if (response.data.success) {
           setEmployees(response.data.users);
+          
+          // 尝试从URL参数中获取employeeId并设置默认值
+          const employeeIdParam = searchParams.get('employeeId');
+          if (employeeIdParam) {
+            const employeeId = parseInt(employeeIdParam);
+            if (!isNaN(employeeId)) {
+              setSelectedEmployee(employeeId);
+            }
+          }
+          
+          // 尝试从URL参数中获取month并设置默认值
+          const monthParam = searchParams.get('month');
+          if (monthParam) {
+            setSelectedMonth(monthParam);
+          }
         } else {
           alert('获取员工列表失败');
         }
@@ -66,7 +83,7 @@ const EmployeeSalesStatsPage: React.FC = () => {
     };
 
     fetchEmployees();
-  }, []);
+  }, [searchParams]);
 
   // 计算员工销售额统计
   const calculateEmployeeSales = async () => {
@@ -268,6 +285,13 @@ const EmployeeSalesStatsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // 当URL参数中的employeeId和month被设置后，自动触发查询
+  useEffect(() => {
+    if (selectedEmployee && selectedMonth) {
+      calculateEmployeeSales();
+    }
+  }, [selectedEmployee, selectedMonth]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">

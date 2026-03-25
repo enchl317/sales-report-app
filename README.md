@@ -15,6 +15,7 @@
 - **数据可视化**: 年度销售汇总，按门店和月份查看
 - **月度目标管理**: 设置和跟踪月度销售目标
 - **达成率计算**: 自动计算销售目标达成率
+- **员工工资管理**: 员工月度工资概览及详细统计
 
 ### 技术栈
 - **前端**: Next.js 14 (App Router)
@@ -92,6 +93,7 @@ scripts/
 - `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
 - `/employee-sales-stats` - 员工销售额统计页面
 - `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
+- `/employee-wage-overview` - 员工月度工资总览页面（新）
 - `/history` - 历史销售记录页面
 - `/stats` - 销售数据统计分析页面
 - `/debug` - 系统调试页面
@@ -105,6 +107,7 @@ scripts/
 - `GET/POST /api/monthly-targets` - 月度目标管理
 - `GET/POST /api/store-thresholds` - 门店月度销售阈值标准管理
 - `GET/POST /api/employee-store-wages` - 员工门店销售工资百分比标准管理
+- `GET /api/employee-wage-summary` - 获取员工月度工资概览数据（新）
 - `GET /api/users` - 获取用户列表
 - `GET /api/store-sales` - 获取门店销售记录
 
@@ -129,6 +132,7 @@ scripts/
 - 新增 `store_monthly_thresholds` 表，用于存储门店月度销售阈值标准
 - 提供 `scripts/init-store-thresholds-table.js` 脚本创建新表并初始化数据
 - 提供 `scripts/reset-monthly-targets.js` 脚本重置月度销售目标数据
+- 新增员工月度工资概览功能，包含相应的API接口和页面
 
 ### 版本控制
 - 遵循语义化版本控制 (SemVer)
