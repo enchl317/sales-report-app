@@ -64,6 +64,12 @@ export async function GET(request: NextRequest) {
       WHERE mt.year = ? AND mt.month = ?
     `, [parseInt(year), parseInt(month)]);
     
+    // 获取所有员工的姓名映射，用于查找员工姓名
+    const employeeNameMap: { [key: number]: string } = {};
+    users.forEach((user: any) => {
+      employeeNameMap[user.id] = user.name;
+    });
+    
     // 构建员工工资概览数据
     // 首先找出有销售记录的员工
     const employeeIdsWithSales = new Set<number>();
@@ -86,8 +92,8 @@ export async function GET(request: NextRequest) {
     // 只处理有销售记录的员工
     const employeeSummaries = Array.from(employeeIdsWithSales).map((employeeId: number) => {
       // 找到员工姓名
-      const user = users.find((u: any) => u.id === employeeId);
-      if (!user) {
+      const userName = employeeNameMap[employeeId];
+      if (!userName) {
         console.log(`未找到ID为${employeeId}的用户信息`);
         return null; // 如果找不到用户信息，则跳过
       }
@@ -107,7 +113,9 @@ export async function GET(request: NextRequest) {
           }
           
           if (Array.isArray(reporterIds) && reporterIds.includes(employeeId)) {
-            totalSales += parseFloat(record.total_sales);
+            // 计算该员工在该条记录中的个人销售额（按人数平均分配）
+            const personalSales = parseFloat(record.total_sales) / reporterIds.length;
+            totalSales += personalSales;
             totalAttendance += 1; // 每次参与销售算作一天出勤
           }
         } catch (e) {
@@ -163,7 +171,15 @@ export async function GET(request: NextRequest) {
                     return false;
                   }
                 })
-                .reduce((sum: number, sr: any) => sum + parseFloat(sr.total_sales), 0);
+                .reduce((sum: number, sr: any) => {
+                  // 按人数分配销售额
+                  let srReporterIds = sr.reporter_ids;
+                  if (typeof srReporterIds === 'string') {
+                    srReporterIds = JSON.parse(srReporterIds);
+                  }
+                  const personalSales = parseFloat(sr.total_sales) / srReporterIds.length;
+                  return sum + personalSales;
+                }, 0);
               
               // 获取该门店的总销售额（用于判断是否达到门店阈值）
               const storeTotalSales = salesRecords
@@ -176,8 +192,9 @@ export async function GET(request: NextRequest) {
                 wagePercentage = wageStandard.wage_percentage_above_target;
               }
               
-              // 计算该笔销售对应的工资
-              budgetWage += (parseFloat(record.total_sales) * wagePercentage) / 100;
+              // 计算该笔销售对应的工资 - 使用员工个人销售额而非整条记录销售额
+              const personalSales = parseFloat(record.total_sales) / reporterIds.length;
+              budgetWage += (personalSales * wagePercentage) / 100;
             }
           }
         } catch (e) {
@@ -185,11 +202,11 @@ export async function GET(request: NextRequest) {
         }
       });
       
-      console.log(`员工 ${user.name} (ID: ${employeeId}) - 总销售额: ${totalSales}, 出勤数: ${totalAttendance}, 预算工资: ${budgetWage}`);
+      console.log(`员工 ${userName} (ID: ${employeeId}) - 总销售额: ${totalSales}, 出勤数: ${totalAttendance}, 预算工资: ${budgetWage}`);
       
       return {
         id: employeeId,
-        name: user.name,
+        name: userName,
         budgetWage: parseFloat(budgetWage.toFixed(2)),
         totalAttendance,
         totalSales: parseFloat(totalSales.toFixed(2))
