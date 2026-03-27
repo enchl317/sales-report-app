@@ -107,8 +107,20 @@ async function executeWithRetry<T>(
 // 查询函数，包含连接验证
 export async function query(sql: string, params?: any[]): Promise<any[]> {
   return executeWithRetry(async () => {
-    const [rows] = await pool.execute(sql, params);
-    return rows as any[];
+    try {
+      const [rows] = await pool.execute(sql, params);
+      return rows as any[];
+    } catch (error) {
+      // 如果遇到连接错误，尝试重建连接池
+      if (isConnectionError(error)) {
+        console.log('检测到连接错误，正在重建连接池...');
+        await rebuildPool();
+        // 重建后重试一次
+        const [rows] = await pool.execute(sql, params);
+        return rows as any[];
+      }
+      throw error;
+    }
   });
 }
 
@@ -135,6 +147,13 @@ export async function transaction<T>(
         } catch (rollbackError) {
           console.error('事务回滚失败:', rollbackError);
         }
+      }
+      
+      // 如果是连接错误，尝试重建连接池
+      if (isConnectionError(error)) {
+        console.log('事务中检测到连接错误，正在重建连接池...');
+        await rebuildPool();
+        throw error; // 重新抛出错误以触发重试机制
       }
       
       throw error;
