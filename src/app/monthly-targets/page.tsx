@@ -48,14 +48,15 @@ export default function MonthlyTargetsPage() {
       setLoading(true);
       const response = await fetch(`/api/monthly-targets?year=${year}&month=${month}`);
       const result = await response.json();
-      
-      const targetsData = Array.isArray(result) ? result : [];
+
+      // API返回的是 { success: true, targets: [...] } 格式
+      const targetsData = result.success && Array.isArray(result.targets) ? result.targets : [];
       const targetsMap: Record<number, number> = {};
-      
+
       targetsData.forEach((target: any) => {
         targetsMap[target.store_id] = parseFloat(target.target_amount);
       });
-      
+
       setTargets(prev => ({ ...prev, ...targetsMap }));
     } catch (error) {
       console.error('获取目标数据失败:', error);
@@ -186,7 +187,7 @@ export default function MonthlyTargetsPage() {
                       type="number"
                       min="0"
                       step="0.01"
-                      value={targets[store.id] || ''}
+                      value={targets[store.id] !== undefined ? targets[store.id] : ''}
                       onChange={(e) => handleTargetChange(store.id, e.target.value)}
                       className="w-40 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="输入目标金额"

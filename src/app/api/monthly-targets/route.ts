@@ -68,33 +68,65 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // 支持批量保存格式 { year, month, targets: [{ storeId, targetAmount }, ...] }
+    if (body.year && body.month && body.targets && Array.isArray(body.targets)) {
+      const { year, month, targets } = body;
+
+      // 批量保存
+      for (const target of targets) {
+        const { storeId, targetAmount } = target;
+
+        if (!storeId || targetAmount === undefined || targetAmount < 0) {
+          return NextResponse.json({
+            success: false,
+            message: '参数不完整或销售阈值不能为负数'
+          }, { status: 400 });
+        }
+
+        await query(`
+          INSERT INTO monthly_targets (store_id, year, month, target_amount)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+          target_amount = VALUES(target_amount),
+          updated_at = CURRENT_TIMESTAMP
+        `, [storeId, year, month, targetAmount]);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: '月度目标保存成功'
+      });
+    }
+
+    // 支持单个记录格式 { storeId, year, month, targetAmount }
     const { storeId, year, month, targetAmount } = body;
 
     if (!storeId || !year || !month || targetAmount === undefined || targetAmount < 0) {
-      return NextResponse.json({ 
-        success: false, 
-        message: '参数不完整或销售阈值不能为负数' 
+      return NextResponse.json({
+        success: false,
+        message: '参数不完整或销售阈值不能为负数'
       }, { status: 400 });
     }
 
     // 检查是否已存在相同记录，如果存在则更新，否则插入
     const result = await query(`
-      INSERT INTO monthly_targets (store_id, year, month, target_amount) 
+      INSERT INTO monthly_targets (store_id, year, month, target_amount)
       VALUES (?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE 
+      ON DUPLICATE KEY UPDATE
       target_amount = VALUES(target_amount),
       updated_at = CURRENT_TIMESTAMP
     `, [storeId, year, month, targetAmount]);
 
-    return NextResponse.json({ 
-      success: true, 
-      message: '月度目标保存成功' 
+    return NextResponse.json({
+      success: true,
+      message: '月度目标保存成功'
     });
   } catch (error) {
     console.error('保存月度目标失败:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: error instanceof Error ? error.message : '保存月度目标失败' 
+    return NextResponse.json({
+      success: false,
+      message: error instanceof Error ? error.message : '保存月度目标失败'
     }, { status: 500 });
   }
 }
