@@ -1,7 +1,9 @@
 import mysql from 'mysql2/promise';
 
+// 存储连接池实例
 let pool: mysql.Pool | null = null;
 
+// 定义连接错误类型
 const connectionErrors = [
   'connection',
   'timeout',
@@ -39,30 +41,36 @@ function isConnectionError(error: unknown): boolean {
   return false;
 }
 
-function initializePool() {
-  if (pool) {
-    return;
-  }
-
-  pool = mysql.createPool({
+// 初始化连接池
+function initializePool(): mysql.Pool {
+  return mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'enchl',
     password: process.env.DB_PASSWORD || '12345678',
     database: process.env.DB_NAME || 'sales_report_db',
     port: parseInt(process.env.DB_PORT || '3306'),
     connectionLimit: 10,
-    waitForConnections: true,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 10000,
-    connectTimeout: 10000,
-    idleTimeout: 60000,
+    acquireTimeout: 60000,        // 获取连接的超时时间
+    timeout: 60000,              // 查询超时时间
+    queueLimit: 0,               // 无限制排队
+    enableKeepAlive: true,       // 启用长连接
+    keepAliveInitialDelay: 0,    // 保持连接初始延迟
+    reconnect: true,             // 自动重连
+    // MySQL特定配置
+    connectTimeout: 60000,       // 连接超时
+    acquireTimeout: 60000,       // 获取连接超时
+    timeout: 60000,              // 查询超时
+    charset: 'utf8mb4',
+    // 连接池配置
+    idleTimeout: 60000,          // 空闲连接超时时间
+    maxIdle: 10,                 // 最大空闲连接数
+    // 防止连接被MySQL服务器关闭
+    pingInterval: 20000,         // ping间隔（毫秒）
   });
-
-  console.log('数据库连接池已初始化');
 }
 
-async function rebuildPool(): Promise<void> {
+// 重建连接池
+async function rebuildPool(): Promise<mysql.Pool> {
   console.log('正在重建数据库连接池...');
 
   if (pool) {
@@ -74,105 +82,71 @@ async function rebuildPool(): Promise<void> {
     }
   }
 
-  pool = null;
-  initializePool();
+  pool = initializePool();
   console.log('数据库连接池重建完成');
+  return pool;
 }
 
-async function getConnection() {
+// 获取连接池，如果不存在则初始化
+async function getPool(): Promise<mysql.Pool> {
   if (!pool) {
-    initializePool();
+    pool = initializePool();
   }
-
-  const connection = await pool!.getConnection();
-  return connection;
+  return pool;
 }
 
-async function executeQuery<T>(sql: string, params?: any[]): Promise<T> {
-  let retries = 3;
-  let lastError: any;
+// 查询函数，具有自动重试和连接恢复功能
+export async function query(sql: string, params?: any[]): Promise<any[]> {
+  let attempts = 0;
+  const maxAttempts = 3;
 
-  for (let attempt = 0; attempt < retries; attempt++) {
-    let connection: mysql.PoolConnection | null = null;
-
+  while (attempts < maxAttempts) {
     try {
-      if (!pool) {
-        initializePool();
-      }
-
-      connection = await pool!.getConnection();
-
-      try {
-        const [rows] = await connection.query(sql, params);
-        return rows as T;
-      } finally {
-        if (connection) {
-          connection.release();
-        }
-      }
+      const pool = await getPool();
+      const [rows] = await pool.execute(sql, params);
+      return rows as any[];
     } catch (error) {
-      lastError = error;
-
-      if (connection) {
-        try {
-          connection.release();
-        } catch (releaseError) {
-          // 忽略释放错误
-        }
-      }
+      console.error(`数据库查询错误 (尝试 ${attempts + 1}/${maxAttempts}):`, error);
 
       if (isConnectionError(error)) {
-        console.error(`数据库连接错误 (尝试 ${attempt + 1}/${retries}):`, error);
+        console.log('检测到连接错误，正在重建连接池...');
+        await rebuildPool();
 
-        if (attempt < retries - 1) {
-          const delay = Math.min(Math.pow(2, attempt) * 500, 3000);
-          console.log(`等待 ${delay}ms 后重试...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-
-          await rebuildPool();
-          continue;
-        }
+        // 延迟后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempts + 1)));
+        attempts++;
+        continue;
       }
 
       throw error;
     }
   }
 
-  throw lastError;
+  throw new Error('数据库查询失败，已达到最大重试次数');
 }
 
-export async function query(sql: string, params?: any[]): Promise<any[]> {
-  try {
-    const rows = await executeQuery(sql, params);
-    return rows as any[];
-  } catch (error) {
-    console.error('查询执行失败:', error);
-    throw error;
-  }
-}
-
+// 事务函数，具有自动重试和连接恢复功能
 export async function transaction<T>(
   transactionCallback: (connection: mysql.PoolConnection) => Promise<T>
 ): Promise<T> {
-  let retries = 3;
-  let lastError: any;
+  let attempts = 0;
+  const maxAttempts = 3;
 
-  for (let attempt = 0; attempt < retries; attempt++) {
+  while (attempts < maxAttempts) {
     let connection: mysql.PoolConnection | null = null;
 
     try {
-      if (!pool) {
-        initializePool();
-      }
+      const pool = await getPool();
+      connection = await pool.getConnection();
 
-      connection = await pool!.getConnection();
       await connection.beginTransaction();
 
       const result = await transactionCallback(connection);
+
       await connection.commit();
       return result;
     } catch (error) {
-      lastError = error;
+      console.error(`数据库事务错误 (尝试 ${attempts + 1}/${maxAttempts}):`, error);
 
       if (connection) {
         try {
@@ -183,16 +157,13 @@ export async function transaction<T>(
       }
 
       if (isConnectionError(error)) {
-        console.error(`事务连接错误 (尝试 ${attempt + 1}/${retries}):`, error);
+        console.log('检测到连接错误，正在重建连接池...');
+        await rebuildPool();
 
-        if (attempt < retries - 1) {
-          const delay = Math.min(Math.pow(2, attempt) * 500, 3000);
-          console.log(`等待 ${delay}ms 后重试...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-
-          await rebuildPool();
-          continue;
-        }
+        // 延迟后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempts + 1)));
+        attempts++;
+        continue;
       }
 
       throw error;
@@ -201,56 +172,61 @@ export async function transaction<T>(
         try {
           connection.release();
         } catch (releaseError) {
-          // 忽略释放错误
+          console.error('释放连接时出错:', releaseError);
         }
       }
     }
   }
 
-  throw lastError;
+  throw new Error('数据库事务失败，已达到最大重试次数');
 }
 
+// 检查连接是否正常
 export async function checkConnection(): Promise<boolean> {
   try {
-    const result = await executeQuery('SELECT 1');
-    return result != null;
+    const pool = await getPool();
+    const [result] = await pool.execute('SELECT 1 as alive');
+    return Array.isArray(result) && result.length > 0;
   } catch (error) {
-    console.error('数据库连接测试失败:', error);
+    console.error('数据库连接检查失败:', error);
     return false;
   }
 }
 
+// 关闭连接池
 export async function closePool(): Promise<void> {
   if (pool) {
     try {
       await pool.end();
-      pool = null;
       console.log('数据库连接池已关闭');
+      pool = null;
     } catch (error) {
       console.error('关闭连接池时出错:', error);
     }
   }
 }
 
-initializePool();
+// 初始化连接池
+getPool();
 
+// 定期健康检查，防止连接因长时间不活动而被关闭
 setInterval(async () => {
   try {
-    const isHealthy = await checkConnection();
-    if (isHealthy) {
-      console.log('数据库连接健康检查通过');
-    } else {
-      console.log('数据库连接健康检查失败，准备重建...');
+    const isConnected = await checkConnection();
+    if (!isConnected) {
+      console.log('数据库连接异常，正在重建连接池...');
       await rebuildPool();
+    } else {
+      console.log('数据库连接健康检查通过');
     }
   } catch (error) {
-    console.error('健康检查出错，准备重建连接池:', error);
+    console.error('健康检查出错:', error);
     try {
       await rebuildPool();
     } catch (rebuildError) {
       console.error('重建连接池失败:', rebuildError);
     }
   }
-}, 20000);
+}, 30000); // 每30秒检查一次
 
-export { pool, rebuildPool };
+export { pool };
