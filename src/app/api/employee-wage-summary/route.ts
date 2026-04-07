@@ -125,8 +125,20 @@ export async function GET(request: NextRequest) {
       
       // 计算预算工资
       // 根据员工在不同门店的销售情况和工资标准来计算
-      // 遍历所有销售记录，为该员工计算工资
+      // 先按门店汇总员工的销售额和门店总销售额
+      const storeSalesMap: { [key: number]: number } = {}; // 门店ID -> 员工在该门店的总销售额
+      const storeTotalSalesMap: { [key: number]: number } = {}; // 门店ID -> 门店总销售额
+      
+      // 首先计算每个门店的总销售额和员工在每个门店的销售额
       salesRecords.forEach((record: any) => {
+        const storeId = record.store_id;
+        
+        // 计算门店总销售额
+        if (!storeTotalSalesMap[storeId]) {
+          storeTotalSalesMap[storeId] = 0;
+        }
+        storeTotalSalesMap[storeId] += parseFloat(record.total_sales);
+        
         try {
           // reporter_ids 可能已经是数组，也可能还是字符串
           let reporterIds = record.reporter_ids;
@@ -135,72 +147,122 @@ export async function GET(request: NextRequest) {
           }
           
           if (Array.isArray(reporterIds) && reporterIds.includes(employeeId)) {
-            const storeId = record.store_id;
+            // 计算该员工在该条记录中的个人销售额（按人数平均分配）
+            const personalSales = parseFloat(record.total_sales) / reporterIds.length;
             
-            // 查找该员工在该门店的工资标准
-            const wageStandard = wageStandards.find(
-              (ws: any) => ws.employee_id === employeeId && ws.store_id === storeId
-            );
-            
-            if (wageStandard) {
-              // 查找该门店的月度销售阈值
-              const storeThreshold = storeThresholds.find(
-                (st: any) => st.store_id === storeId
-              );
-              
-              // 查找该门店的月度销售目标
-              const monthlyTarget = monthlyTargets.find(
-                (mt: any) => mt.store_id === storeId
-              );
-              
-              // 根据销售情况计算工资
-              let wagePercentage = wageStandard.wage_percentage_below_target;
-              
-              // 计算该员工在该门店的总销售额
-              const employeeStoreSales = salesRecords
-                .filter((sr: any) => {
-                  try {
-                    // sr.reporter_ids 可能已经是数组，也可能还是字符串
-                    let srReporterIds = sr.reporter_ids;
-                    if (typeof srReporterIds === 'string') {
-                      srReporterIds = JSON.parse(srReporterIds);
-                    }
-                    return sr.store_id === storeId && Array.isArray(srReporterIds) && srReporterIds.includes(employeeId);
-                  } catch (e) {
-                    console.error('过滤销售记录时解析上报人ID失败:', e);
-                    return false;
-                  }
-                })
-                .reduce((sum: number, sr: any) => {
-                  // 按人数分配销售额
-                  let srReporterIds = sr.reporter_ids;
-                  if (typeof srReporterIds === 'string') {
-                    srReporterIds = JSON.parse(srReporterIds);
-                  }
-                  const personalSales = parseFloat(sr.total_sales) / srReporterIds.length;
-                  return sum + personalSales;
-                }, 0);
-              
-              // 获取该门店的总销售额（用于判断是否达到门店阈值）
-              const storeTotalSales = salesRecords
-                .filter((sr: any) => sr.store_id === storeId)
-                .reduce((sum: number, sr: any) => sum + parseFloat(sr.total_sales), 0);
-              
-              if (storeThreshold && storeTotalSales >= parseFloat(storeThreshold.threshold_amount)) {
-                wagePercentage = wageStandard.wage_percentage_above_target;
-              } else if (monthlyTarget && storeTotalSales >= parseFloat(monthlyTarget.target_amount)) {
-                wagePercentage = wageStandard.wage_percentage_above_target;
-              }
-              
-              // 计算该笔销售对应的工资 - 使用员工个人销售额而非整条记录销售额
-              const personalSales = parseFloat(record.total_sales) / reporterIds.length;
-              budgetWage += (personalSales * wagePercentage) / 100;
+            if (!storeSalesMap[storeId]) {
+              storeSalesMap[storeId] = 0;
             }
+            storeSalesMap[storeId] += personalSales;
           }
         } catch (e) {
           console.error('解析上报人ID失败:', e, '原始数据:', record.reporter_ids);
         }
       });
+      
+      // 特殊处理：南东店(1)和杨浦店(5)被视为一个整体
+      const combinedStores = [1, 5]; // 南东店和杨浦店
+      const processedStores = new Set<number>();
+      
+      // 处理南东店和杨浦店的组合
+      if (combinedStores.every(storeId => storeSalesMap[storeId])) {
+        // 如果员工在这两个店都有销售记录
+        const nanDongSales = storeSalesMap[1] || 0;
+        const yangPuSales = storeSalesMap[5] || 0;
+        const nanDongTotalSales = storeTotalSalesMap[1] || 0;
+        const yangPuTotalSales = storeTotalSalesMap[5] || 0;
+        
+        // 合并销售额
+        const combinedEmployeeSales = nanDongSales + yangPuSales;
+        const combinedStoreTotalSales = nanDongTotalSales + yangPuTotalSales;
+        
+        // 查找南东店的工资标准（两个店的工资标准应该是一样的）
+        const nanDongWageStandard = wageStandards.find(
+          (ws: any) => ws.employee_id === employeeId && ws.store_id === 1
+        );
+        
+        if (nanDongWageStandard) {
+          // 查找南东店和杨浦店的月度销售阈值
+          const nanDongThreshold = storeThresholds.find(
+            (st: any) => st.store_id === 1
+          );
+          const yangPuThreshold = storeThresholds.find(
+            (st: any) => st.store_id === 5
+          );
+          
+          // 查找南东店和杨浦店的月度销售目标
+          const nanDongTarget = monthlyTargets.find(
+            (mt: any) => mt.store_id === 1
+          );
+          const yangPuTarget = monthlyTargets.find(
+            (mt: any) => mt.store_id === 5
+          );
+          
+          // 计算合并阈值
+          const combinedThreshold = (nanDongThreshold ? parseFloat(nanDongThreshold.threshold_amount) : 0) +
+                                   (yangPuThreshold ? parseFloat(yangPuThreshold.threshold_amount) : 0);
+          const combinedTarget = (nanDongTarget ? parseFloat(nanDongTarget.target_amount) : 0) +
+                                (yangPuTarget ? parseFloat(yangPuTarget.target_amount) : 0);
+          
+          // 根据合并后的销售情况确定工资百分比
+          let wagePercentage = nanDongWageStandard.wage_percentage_below_target;
+          
+          if (combinedThreshold > 0 && combinedStoreTotalSales >= combinedThreshold) {
+            wagePercentage = nanDongWageStandard.wage_percentage_above_target;
+          } else if (combinedTarget > 0 && combinedStoreTotalSales >= combinedTarget) {
+            wagePercentage = nanDongWageStandard.wage_percentage_above_target;
+          }
+          
+          // 计算合并门店的预算工资
+          budgetWage += (combinedEmployeeSales * wagePercentage) / 100;
+        }
+        
+        // 标记这两个门店已处理
+        processedStores.add(1);
+        processedStores.add(5);
+      }
+      
+      // 处理其他门店
+      for (const storeIdStr in storeSalesMap) {
+        const storeId = parseInt(storeIdStr);
+        
+        // 跳过已处理的门店
+        if (processedStores.has(storeId)) {
+          continue;
+        }
+        
+        const employeeStoreSales = storeSalesMap[storeId];
+        const storeTotalSales = storeTotalSalesMap[storeId] || 0;
+        
+        // 查找该员工在该门店的工资标准
+        const wageStandard = wageStandards.find(
+          (ws: any) => ws.employee_id === employeeId && ws.store_id === storeId
+        );
+        
+        if (wageStandard) {
+          // 查找该门店的月度销售阈值
+          const storeThreshold = storeThresholds.find(
+            (st: any) => st.store_id === storeId
+          );
+          
+          // 查找该门店的月度销售目标
+          const monthlyTarget = monthlyTargets.find(
+            (mt: any) => mt.store_id === storeId
+          );
+          
+          // 根据门店整体销售情况确定工资百分比
+          let wagePercentage = wageStandard.wage_percentage_below_target;
+          
+          if (storeThreshold && storeTotalSales >= parseFloat(storeThreshold.threshold_amount)) {
+            wagePercentage = wageStandard.wage_percentage_above_target;
+          } else if (monthlyTarget && storeTotalSales >= parseFloat(monthlyTarget.target_amount)) {
+            wagePercentage = wageStandard.wage_percentage_above_target;
+          }
+          
+          // 计算该门店的预算工资
+          budgetWage += (employeeStoreSales * wagePercentage) / 100;
+        }
+      }
       
       console.log(`员工 ${userName} (ID: ${employeeId}) - 总销售额: ${totalSales}, 出勤数: ${totalAttendance}, 预算工资: ${budgetWage}`);
       
