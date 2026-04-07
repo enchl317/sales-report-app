@@ -45,7 +45,7 @@ const InventoryCountPage: React.FC = () => {
     storeId: storeIdFromUrl || '',
     storeShortName: '',
     createdDate: new Date().toISOString().split('T')[0],
-    details: [] as { productId: number; productName: string; countedQuantity: number }[]
+    details: [] as { productId: number; productName: string; countedQuantity: number | null }[]
   });
 
   const [message, setMessage] = useState('');
@@ -101,7 +101,7 @@ const InventoryCountPage: React.FC = () => {
           const initialDetails = sortedProducts.map(product => ({
             productId: product.id,
             productName: product.name,
-            countedQuantity: 0
+            countedQuantity: null as number | null
           }));
           
           setFormData(prev => ({
@@ -157,10 +157,13 @@ const InventoryCountPage: React.FC = () => {
   }, [formData.storeId]);
 
   const handleQuantityChange = (productId: number, value: string) => {
-    const numValue = value === '' ? 0 : parseFloat(value);
+    let numValue: number | null = null;
     
-    if (isNaN(numValue) || numValue < 0) {
-      return; // 不允许负数
+    if (value !== '') {
+      numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue < 0) {
+        return; // 不允许负数
+      }
     }
 
     setFormData(prev => ({
@@ -198,7 +201,7 @@ const InventoryCountPage: React.FC = () => {
     setMessage('');
 
     // 检查是否有负数
-    const hasNegative = formData.details.some(detail => detail.countedQuantity < 0);
+    const hasNegative = formData.details.some(detail => detail.countedQuantity !== null && detail.countedQuantity < 0);
     if (hasNegative) {
       setMessage('盘点数量不能为负数');
       setMessageType('error');
@@ -213,10 +216,13 @@ const InventoryCountPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          storeId: parseInt(formData.storeId),
-          createdDate: formData.createdDate,
-          details: formData.details
-        })
+           storeId: parseInt(formData.storeId),
+           createdDate: formData.createdDate,
+           details: formData.details.map(detail => ({
+             ...detail,
+             countedQuantity: detail.countedQuantity !== null ? detail.countedQuantity : 0
+           }))
+          })
       });
 
       const result = await response.json();
@@ -226,16 +232,16 @@ const InventoryCountPage: React.FC = () => {
         setMessageType('success');
         
         // 清空表单
-        setFormData({
-          storeId: storeIdFromUrl || '',
-          storeShortName: storeIdFromUrl && stores.length > 0 ? stores.find(s => s.id == parseInt(storeIdFromUrl))?.short_name || '' : '',
-          createdDate: new Date().toISOString().split('T')[0],
-          details: products.map(product => ({
-            productId: product.id,
-            productName: product.name,
-            countedQuantity: 0
-          }))
-        });
+         setFormData({
+           storeId: storeIdFromUrl || '',
+           storeShortName: storeIdFromUrl && stores.length > 0 ? stores.find(s => s.id == parseInt(storeIdFromUrl))?.short_name || '' : '',
+           createdDate: new Date().toISOString().split('T')[0],
+           details: products.map(product => ({
+             productId: product.id,
+             productName: product.name,
+             countedQuantity: null
+           }))
+         });
         
         // 自动跳转到查看历史盘点页面
         setTimeout(() => {
@@ -357,14 +363,14 @@ const InventoryCountPage: React.FC = () => {
                                  </td>
                                  <td className="px-4 py-2 whitespace-nowrap text-sm">
                                    <input
-                                     type="number"
-                                     min="0"
-                                     step="0.01"
-                                     value={detail.countedQuantity}
-                                     onChange={(e) => handleQuantityChange(detail.productId, e.target.value)}
-                                     className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                     placeholder="数量"
-                                   />
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={detail.countedQuantity !== null ? detail.countedQuantity : ''}
+                                    onChange={(e) => handleQuantityChange(detail.productId, e.target.value)}
+                                    className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="0"
+                                  />
                                  </td>
                                </tr>
                              );

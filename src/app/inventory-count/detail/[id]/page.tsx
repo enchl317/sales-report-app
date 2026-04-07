@@ -175,8 +175,8 @@ const InventoryCountDetailPage: React.FC = () => {
                           {detail.productName}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                          {detail.countedQuantity}
-                        </td>
+                           {detail.countedQuantity}
+                          </td>
                       </tr>
                     ))}
                   </tbody>
