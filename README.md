@@ -90,6 +90,7 @@ scripts/
 - `/yearly-sales` - 年度销售数据汇总页面
 - `/monthly-targets` - 月度目标管理页面
 - `/monthly-target-management` - 门店月度销售阈值标准维护页面
+- `/products` - 商品主档管理页面（查看、新建、编辑、删除商品）
 - `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
 - `/employee-sales-stats` - 员工销售额统计页面
 - `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
