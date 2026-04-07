@@ -1,6 +1,6 @@
 # 门店销售报告管理系统
 
-版本: 1.2.0
+版本: 1.3.0
 
 ## 项目概述
 
@@ -16,6 +16,7 @@
 - **月度目标管理**: 设置和跟踪月度销售目标
 - **达成率计算**: 自动计算销售目标达成率
 - **员工工资管理**: 员工月度工资概览及详细统计
+- **库存盘点管理**: 门店商品库存盘点记录及历史追踪
 
 ### 技术栈
 - **前端**: Next.js 14 (App Router)
@@ -91,6 +92,7 @@ scripts/
 - `/monthly-targets` - 月度目标管理页面
 - `/monthly-target-management` - 门店月度销售阈值标准维护页面
 - `/products` - 商品主档管理页面（查看、新建、编辑、删除商品）
+- `/inventory-count` - 门店库存盘点页面（录入盘点数据、查看历史记录）
 - `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
 - `/employee-sales-stats` - 员工销售额统计页面
 - `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
@@ -111,6 +113,8 @@ scripts/
 - `GET /api/employee-wage-summary` - 获取员工月度工资概览数据（新）
 - `GET /api/users` - 获取用户列表
 - `GET /api/store-sales` - 获取门店销售记录
+- `GET/POST /api/inventory-count` - 门店库存盘点管理
+- `GET/DELETE /api/inventory-count/[id]` - 获取/删除特定库存盘点记录
 
 ## 部署
 
@@ -134,6 +138,8 @@ scripts/
 - 提供 `scripts/init-store-thresholds-table.js` 脚本创建新表并初始化数据
 - 提供 `scripts/reset-monthly-targets.js` 脚本重置月度销售目标数据
 - 新增员工月度工资概览功能，包含相应的API接口和页面
+- 新增库存盘点管理功能，包含 `inventory_counts` 和 `inventory_count_details` 表，提供完整的库存盘点记录和历史追踪功能
+- 提供 `scripts/init-inventory-count.js` 脚本初始化库存盘点表结构
 
 ### 版本控制
 - 遵循语义化版本控制 (SemVer)
