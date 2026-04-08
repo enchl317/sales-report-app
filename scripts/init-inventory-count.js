@@ -42,7 +42,7 @@ async function initInventoryCount() {
         inventory_count_id INT NOT NULL COMMENT '库存盘点主表ID',
         product_id INT NOT NULL COMMENT '商品ID',
         product_name VARCHAR(255) NOT NULL COMMENT '商品名称',
-        counted_quantity DECIMAL(10,2) DEFAULT 0.00 COMMENT '盘点数量',
+        counted_quantity DECIMAL(10,4) DEFAULT 0.0000 COMMENT '盘点数量',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (inventory_count_id) REFERENCES inventory_counts(id) ON DELETE CASCADE,

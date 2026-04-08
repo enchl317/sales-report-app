@@ -365,7 +365,7 @@ const InventoryCountPage: React.FC = () => {
                                    <input
                                     type="number"
                                     min="0"
-                                    step="0.01"
+                                    step="0.0001"
                                     value={detail.countedQuantity !== null ? detail.countedQuantity : ''}
                                     onChange={(e) => handleQuantityChange(detail.productId, e.target.value)}
                                     className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
