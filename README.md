@@ -17,6 +17,7 @@
 - **达成率计算**: 自动计算销售目标达成率
 - **员工工资管理**: 员工月度工资概览及详细统计
 - **库存盘点管理**: 门店商品库存盘点记录及历史追踪
+- **门店进货管理**: 门店商品进货单录入及历史追踪
 
 ### 技术栈
 - **前端**: Next.js 14 (App Router)
@@ -93,6 +94,8 @@ scripts/
 - `/monthly-target-management` - 门店月度销售阈值标准维护页面
 - `/products` - 商品主档管理页面（查看、新建、编辑、删除商品）
 - `/inventory-count` - 门店库存盘点页面（录入盘点数据、查看历史记录）
+- `/store-purchase` - 门店进货单页面（录入进货数据、查看历史记录）
+- `/store-purchase/detail/[id]` - 门店进货单详情页面
 - `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
 - `/employee-sales-stats` - 员工销售额统计页面
 - `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
@@ -115,6 +118,8 @@ scripts/
 - `GET /api/store-sales` - 获取门店销售记录
 - `GET/POST /api/inventory-count` - 门店库存盘点管理
 - `GET/DELETE /api/inventory-count/[id]` - 获取/删除特定库存盘点记录
+- `GET/POST /api/store-purchase` - 门店进货单管理
+- `GET/DELETE /api/store-purchase/[id]` - 获取/删除特定进货单记录
 
 ## 部署
 
@@ -140,6 +145,8 @@ scripts/
 - 新增员工月度工资概览功能，包含相应的API接口和页面
 - 新增库存盘点管理功能，包含 `inventory_counts` 和 `inventory_count_details` 表，提供完整的库存盘点记录和历史追踪功能
 - 提供 `scripts/init-inventory-count.js` 脚本初始化库存盘点表结构
+- 新增门店进货管理功能，包含 `store_purchases` 和 `store_purchase_details` 表，提供完整的进货单记录和历史追踪功能
+- 提供 `scripts/init-store-purchase.js` 脚本初始化门店进货表结构
 
 ### 版本控制
 - 遵循语义化版本控制 (SemVer)

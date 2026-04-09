@@ -12,6 +12,8 @@ export default function NavigationMenu() {
     { key: '/sales-submit', title: '销售上报', href: '/sales-submit' },
     { key: '/history', title: '历史', href: '/history' },
     { key: '/stats', title: '统计', href: '/stats' },
+    { key: '/store-purchase', title: '进货', href: '/store-purchase' },
+    { key: '/inventory-count', title: '盘点', href: '/inventory-count' },
   ];
 
   // 获取用户角色，确保在客户端环境下才使用 localStorage
