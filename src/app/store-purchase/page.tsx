@@ -8,6 +8,7 @@ interface Store {
   name: string;
   short_name: string;
   address: string;
+  store_type: number;
 }
 
 interface Product {
@@ -18,6 +19,7 @@ interface Product {
   specification?: string;
   unit?: string;
   sortOrder: number;
+  offlineSale: number;
 }
 
 interface StorePurchase {
@@ -57,6 +59,7 @@ const StorePurchasePage: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [currentStoreType, setCurrentStoreType] = useState<number>(0);
 
   // 获取门店列表
   useEffect(() => {
@@ -67,7 +70,7 @@ const StorePurchasePage: React.FC = () => {
         if (data.success) {
           setStores(data.stores);
           
-          // 如果URL中有storeId参数，设置对应的门店简称
+          // 如果URL中有storeId参数，设置对应的门店简称和门店类型
           if (storeIdFromUrl) {
             const store = data.stores.find((s: any) => s.id == storeIdFromUrl);
             if (store) {
@@ -75,6 +78,7 @@ const StorePurchasePage: React.FC = () => {
                 ...prev,
                 storeShortName: store.short_name
               }));
+              setCurrentStoreType(store.store_type);
             }
           }
         }
@@ -257,7 +261,7 @@ const StorePurchasePage: React.FC = () => {
       [name]: value
     }));
 
-    // 如果选择了门店，自动填充门店简称
+    // 如果选择了门店，自动填充门店简称和门店类型
     if (name === 'storeId') {
       const selectedStore = stores.find(store => store.id == parseInt(value));
       if (selectedStore) {
@@ -266,6 +270,7 @@ const StorePurchasePage: React.FC = () => {
           storeShortName: selectedStore.short_name,
           details: [{ id: 'temp-0', productId: 0, productName: '', purchaseQuantity: null }] // 切换门店时重置为默认一行
         }));
+        setCurrentStoreType(selectedStore.store_type);
       }
     }
   };
@@ -379,9 +384,15 @@ const StorePurchasePage: React.FC = () => {
     return `${month}-${day}`;
   };
 
-  // 获取未选择的商品列表
+  // 获取未选择的商品列表，根据门店类型过滤
   const getAvailableProducts = (currentProductId: number) => {
-    return products.filter(product => 
+    // 线下门店(store_type=0)：只显示线下售卖为是的商品
+    // 电商门店(store_type=1)：显示所有商品
+    const filteredProducts = products.filter(product => 
+      currentStoreType === 1 || product.offlineSale === 1
+    );
+    
+    return filteredProducts.filter(product => 
       !formData.details.some(d => d.productId === product.id) || product.id === currentProductId
     );
   };

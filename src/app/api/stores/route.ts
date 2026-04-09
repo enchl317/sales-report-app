@@ -4,15 +4,16 @@ import { query } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    // 查询所有门店
-    const stores = await query('SELECT id, name, short_name FROM stores ORDER BY id ASC');
+    // 查询所有门店，包含门店类型
+    const stores = await query('SELECT id, name, short_name, store_type FROM stores ORDER BY id ASC');
     
     return NextResponse.json({ 
       success: true, 
       stores: stores.map((store: any) => ({
         id: store.id,
         name: store.name,
-        short_name: store.short_name
+        short_name: store.short_name,
+        store_type: store.store_type !== undefined ? store.store_type : 0
       })) 
     });
   } catch (error) {

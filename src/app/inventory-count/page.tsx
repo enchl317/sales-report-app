@@ -8,6 +8,7 @@ interface Store {
   name: string;
   short_name: string;
   address: string;
+  store_type: number;
 }
 
 interface Product {
@@ -18,6 +19,7 @@ interface Product {
   specification?: string;
   unit?: string;
   sortOrder: number;
+  offlineSale: number;
 }
 
 interface InventoryCount {
@@ -56,6 +58,7 @@ const InventoryCountPage: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [currentStoreType, setCurrentStoreType] = useState<number>(0);
 
   // 获取门店列表
   useEffect(() => {
@@ -65,17 +68,6 @@ const InventoryCountPage: React.FC = () => {
         const data = await response.json();
         if (data.success) {
           setStores(data.stores);
-          
-          // 如果URL中有storeId参数，设置对应的门店简称
-          if (storeIdFromUrl) {
-            const store = data.stores.find((s: any) => s.id == storeIdFromUrl);
-            if (store) {
-              setFormData(prev => ({
-                ...prev,
-                storeShortName: store.short_name
-              }));
-            }
-          }
         }
       } catch (error) {
         console.error('获取门店列表失败:', error);
@@ -83,9 +75,23 @@ const InventoryCountPage: React.FC = () => {
     };
 
     fetchStores();
-  }, [storeIdFromUrl]);
+  }, []);
 
-  // 获取商品列表
+  // 当 stores 加载完成后，如果有 storeIdFromUrl，设置门店信息
+  useEffect(() => {
+    if (stores.length > 0 && storeIdFromUrl) {
+      const store = stores.find((s: any) => s.id == storeIdFromUrl);
+      if (store) {
+        setFormData(prev => ({
+          ...prev,
+          storeShortName: store.short_name
+        }));
+        setCurrentStoreType(store.store_type || 0);
+      }
+    }
+  }, [stores, storeIdFromUrl]);
+
+  // 获取商品列表并根据门店类型过滤
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -97,8 +103,15 @@ const InventoryCountPage: React.FC = () => {
           const sortedProducts = [...data.products].sort((a, b) => a.sortOrder - b.sortOrder);
           setProducts(sortedProducts);
           
+          // 根据门店类型过滤商品
+          // 线下门店(store_type=0)：只显示线下售卖为是的商品
+          // 电商门店(store_type=1)：显示所有商品
+          const filteredProducts = sortedProducts.filter(p => 
+            currentStoreType === 1 || p.offlineSale === 1
+          );
+          
           // 初始化盘点详情
-          const initialDetails = sortedProducts.map(product => ({
+          const initialDetails = filteredProducts.map(product => ({
             productId: product.id,
             productName: product.name,
             countedQuantity: null as number | null
@@ -115,7 +128,7 @@ const InventoryCountPage: React.FC = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [currentStoreType]);
 
   // 获取历史盘点记录
   const fetchHistory = async () => {
@@ -183,7 +196,7 @@ const InventoryCountPage: React.FC = () => {
       [name]: value
     }));
 
-    // 如果选择了门店，自动填充门店简称
+    // 如果选择了门店，自动填充门店简称和门店类型
     if (name === 'storeId') {
       const selectedStore = stores.find(store => store.id == parseInt(value));
       if (selectedStore) {
@@ -191,6 +204,7 @@ const InventoryCountPage: React.FC = () => {
           ...prev,
           storeShortName: selectedStore.short_name
         }));
+        setCurrentStoreType(selectedStore.store_type);
       }
     }
   };
