@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         specification: product.specification,
         unit: product.unit,
         sortOrder: product.sort_order,
+        offlineSale: product.offline_sale !== undefined ? product.offline_sale : 1,
         createdAt: product.created_at,
         updatedAt: product.updated_at
       })) 
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (!['半成品', '熟制品', '肉干与其它', '耗材'].includes(category)) {
+    if (!['半成品', '熟制品', '肉干与其它', '耗材', '话梅'].includes(category)) {
       return NextResponse.json({ 
         success: false, 
         message: '无效的商品品类' 
@@ -71,9 +72,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result: any = await query(`
-      INSERT INTO products (name, code, category, specification, unit, sort_order) 
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [name, code || null, category, specification || null, unit || null, sortOrder || 0]);
+      INSERT INTO products (name, code, category, specification, unit, sort_order, offline_sale) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [name, code || null, category, specification || null, unit || null, sortOrder || 0, body.offlineSale !== undefined ? body.offlineSale : 1]);
 
     const newProduct = await query('SELECT * FROM products WHERE id = ?', [result.insertId]);
 
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
         specification: newProduct[0].specification,
         unit: newProduct[0].unit,
         sortOrder: newProduct[0].sort_order,
+        offlineSale: newProduct[0].offline_sale !== undefined ? newProduct[0].offline_sale : 1,
         createdAt: newProduct[0].created_at,
         updatedAt: newProduct[0].updated_at
       }

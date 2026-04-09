@@ -36,7 +36,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         category: product.category,
         specification: product.specification,
         unit: product.unit,
-        sortOrder: product.sort_order,
+          sortOrder: product.sort_order,
+        offlineSale: product.offline_sale !== undefined ? product.offline_sale : 1,
         createdAt: product.created_at,
         updatedAt: product.updated_at
       }
@@ -71,7 +72,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }, { status: 400 });
     }
 
-    if (!['半成品', '熟制品', '肉干与其它', '耗材'].includes(category)) {
+    if (!['半成品', '熟制品', '肉干与其它', '耗材', '话梅'].includes(category)) {
       return NextResponse.json({ 
         success: false, 
         message: '无效的商品品类' 
@@ -80,9 +81,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const result: any = await query(`
       UPDATE products 
-      SET name = ?, code = ?, category = ?, specification = ?, unit = ?, sort_order = ?, updated_at = NOW()
+      SET name = ?, code = ?, category = ?, specification = ?, unit = ?, sort_order = ?, offline_sale = ?, updated_at = NOW()
       WHERE id = ?
-    `, [name, code || null, category, specification || null, unit || null, sortOrder || 0, id]);
+    `, [name, code || null, category, specification || null, unit || null, sortOrder || 0, body.offlineSale !== undefined ? body.offlineSale : 1, id]);
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ 
@@ -104,6 +105,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         specification: updatedProduct[0].specification,
         unit: updatedProduct[0].unit,
         sortOrder: updatedProduct[0].sort_order,
+        offlineSale: updatedProduct[0].offline_sale !== undefined ? updatedProduct[0].offline_sale : 1,
         createdAt: updatedProduct[0].created_at,
         updatedAt: updatedProduct[0].updated_at
       }
