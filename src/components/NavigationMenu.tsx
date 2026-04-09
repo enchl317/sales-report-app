@@ -14,6 +14,7 @@ export default function NavigationMenu() {
     { key: '/stats', title: '统计', href: '/stats' },
     { key: '/store-purchase', title: '进货', href: '/store-purchase' },
     { key: '/inventory-count', title: '盘点', href: '/inventory-count' },
+    { key: '/store-transfer', title: '调拨', href: '/store-transfer' },
   ];
 
   // 获取用户角色，确保在客户端环境下才使用 localStorage

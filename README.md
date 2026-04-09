@@ -1,6 +1,6 @@
 # 门店销售报告管理系统
 
-版本: 1.3.0
+版本: 1.5.0
 
 ## 项目概述
 
@@ -96,6 +96,8 @@ scripts/
 - `/inventory-count` - 门店库存盘点页面（录入盘点数据、查看历史记录）
 - `/store-purchase` - 门店进货单页面（录入进货数据、查看历史记录）
 - `/store-purchase/detail/[id]` - 门店进货单详情页面
+- `/store-transfer` - 门店调拨页面（录入调拨数据、查看历史记录）
+- `/store-transfer/detail/[id]` - 门店调拨单详情页面
 - `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
 - `/employee-sales-stats` - 员工销售额统计页面
 - `/employee-store-wage-management` - 员工门店销售工资百分比标准维护页面
@@ -120,6 +122,8 @@ scripts/
 - `GET/DELETE /api/inventory-count/[id]` - 获取/删除特定库存盘点记录
 - `GET/POST /api/store-purchase` - 门店进货单管理
 - `GET/DELETE /api/store-purchase/[id]` - 获取/删除特定进货单记录
+- `GET/POST /api/store-transfer` - 门店调拨管理
+- `GET/DELETE /api/store-transfer/[id]` - 获取/删除特定调拨单记录
 
 ## 部署
 
@@ -147,6 +151,9 @@ scripts/
 - 提供 `scripts/init-inventory-count.js` 脚本初始化库存盘点表结构
 - 新增门店进货管理功能，包含 `store_purchases` 和 `store_purchase_details` 表，提供完整的进货单记录和历史追踪功能
 - 提供 `scripts/init-store-purchase.js` 脚本初始化门店进货表结构
+- 新增门店调拨管理功能，包含 `store_transfers` 和 `store_transfer_details` 表，提供完整的调拨单记录和历史追踪功能
+- 提供 `scripts/init-store-transfer.js` 脚本初始化门店调拨表结构
+- 调拨单据ID格式为 `MDDB+目标门店id+来源门店id+日期`
 
 ### 版本控制
 - 遵循语义化版本控制 (SemVer)
