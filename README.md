@@ -18,6 +18,7 @@
 - **员工工资管理**: 员工月度工资概览及详细统计
 - **库存盘点管理**: 门店商品库存盘点记录及历史追踪
 - **门店进货管理**: 门店商品进货单录入及历史追踪
+- **库存汇总**: 查看所有门店最新一次库存盘点数据的汇总表，支持导出Excel
 
 ### 技术栈
 - **前端**: Next.js 14 (App Router)
@@ -94,6 +95,7 @@ scripts/
 - `/monthly-target-management` - 门店月度销售阈值标准维护页面
 - `/products` - 商品主档管理页面（查看、新建、编辑、删除商品）
 - `/inventory-count` - 门店库存盘点页面（录入盘点数据、查看历史记录）
+- `/inventory-summary` - 库存汇总页面（查看所有门店最新盘点数据汇总）
 - `/store-purchase` - 门店进货单页面（录入进货数据、查看历史记录）
 - `/store-purchase/detail/[id]` - 门店进货单详情页面
 - `/store-transfer` - 门店调拨页面（录入调拨数据、查看历史记录）
@@ -120,6 +122,8 @@ scripts/
 - `GET /api/store-sales` - 获取门店销售记录
 - `GET/POST /api/inventory-count` - 门店库存盘点管理
 - `GET/DELETE /api/inventory-count/[id]` - 获取/删除特定库存盘点记录
+- `GET /api/inventory-summary` - 库存汇总（查看所有门店最新盘点数据）
+- `GET /api/inventory-summary?action=export` - 导出库存汇总Excel
 - `GET/POST /api/store-purchase` - 门店进货单管理
 - `GET/DELETE /api/store-purchase/[id]` - 获取/删除特定进货单记录
 - `GET/POST /api/store-transfer` - 门店调拨管理

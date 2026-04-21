@@ -14,6 +14,7 @@ export default function NavigationMenu() {
     { key: '/stats', title: '统计', href: '/stats' },
     { key: '/store-purchase', title: '进货', href: '/store-purchase' },
     { key: '/inventory-count', title: '盘点', href: '/inventory-count' },
+    { key: '/inventory-summary', title: '汇总', href: '/inventory-summary' },
     { key: '/store-transfer', title: '调拨', href: '/store-transfer' },
   ];
 
