@@ -10,13 +10,25 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const action = searchParams.get('action');
 
-  // 如果action=export，则导出Excel
+    // 如果action=export，则导出Excel
   if (action === 'export') {
-    return handleExport();
+    const response = await handleExport();
+    // 添加缓存控制头部
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   }
 
   // 默认返回JSON数据
-  return handleGetData();
+  const response = await handleGetData();
+  
+  // 添加缓存控制头部，确保不缓存
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  
+  return response;
 }
 
 async function handleGetData() {
@@ -40,11 +52,13 @@ async function handleGetData() {
     const latestCounts = await query(`
       SELECT ic1.store_id, ic1.created_date, ic1.id as inventory_count_id
       FROM inventory_counts ic1
-      INNER JOIN (
-        SELECT store_id, MAX(created_date) as max_date
-        FROM inventory_counts
-        GROUP BY store_id
-      ) ic2 ON ic1.store_id = ic2.store_id AND ic1.created_date = ic2.max_date
+      WHERE ic1.id = (
+        SELECT ic2.id
+        FROM inventory_counts ic2
+        WHERE ic2.store_id = ic1.store_id
+        ORDER BY ic2.created_date DESC, ic2.id DESC
+        LIMIT 1
+      )
     `);
 
     // 4. 构建门店ID到最新盘点信息的映射
@@ -54,9 +68,15 @@ async function handleGetData() {
       let dateStr: string | null = null;
       if (item.created_date) {
         if (typeof item.created_date === 'string') {
+          // 处理字符串格式 "2026-04-21" 或 "2026-04-21T00:00:00.000Z"
           dateStr = item.created_date.split(' ')[0].split('T')[0];
         } else if (item.created_date instanceof Date) {
-          dateStr = item.created_date.toISOString().split('T')[0];
+          // 处理Date对象，需要考虑时区转换为中国时区
+          const date = item.created_date;
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          dateStr = `${year}-${month}-${day}`;
         }
       }
       storeLatestMap.set(item.store_id, {
@@ -152,11 +172,13 @@ async function handleExport() {
     const latestCounts = await query(`
       SELECT ic1.store_id, ic1.created_date, ic1.id as inventory_count_id
       FROM inventory_counts ic1
-      INNER JOIN (
-        SELECT store_id, MAX(created_date) as max_date
-        FROM inventory_counts
-        GROUP BY store_id
-      ) ic2 ON ic1.store_id = ic2.store_id AND ic1.created_date = ic2.max_date
+      WHERE ic1.id = (
+        SELECT ic2.id
+        FROM inventory_counts ic2
+        WHERE ic2.store_id = ic1.store_id
+        ORDER BY ic2.created_date DESC, ic2.id DESC
+        LIMIT 1
+      )
     `);
 
     // 4. 构建门店ID到最新盘点信息的映射
@@ -166,9 +188,15 @@ async function handleExport() {
       let dateStr: string | null = null;
       if (item.created_date) {
         if (typeof item.created_date === 'string') {
+          // 处理字符串格式 "2026-04-21" 或 "2026-04-21T00:00:00.000Z"
           dateStr = item.created_date.split(' ')[0].split('T')[0];
         } else if (item.created_date instanceof Date) {
-          dateStr = item.created_date.toISOString().split('T')[0];
+          // 处理Date对象，需要考虑时区转换为中国时区
+          const date = item.created_date;
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          dateStr = `${year}-${month}-${day}`;
         }
       }
       storeLatestMap.set(item.store_id, {
