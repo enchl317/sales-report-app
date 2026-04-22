@@ -48,9 +48,9 @@ async function handleGetData() {
     `);
 
     // 3. 获取每个门店的最新盘点记录
-    // 首先获取每个门店的最新盘点日期
+    // 使用DATE_FORMAT直接返回字符串格式的日期，避免时区转换问题
     const latestCounts = await query(`
-      SELECT ic1.store_id, ic1.created_date, ic1.id as inventory_count_id
+      SELECT ic1.store_id, DATE_FORMAT(ic1.created_date, '%Y-%m-%d') as created_date, ic1.id as inventory_count_id
       FROM inventory_counts ic1
       WHERE ic1.id = (
         SELECT ic2.id
@@ -64,19 +64,8 @@ async function handleGetData() {
     // 4. 构建门店ID到最新盘点信息的映射
     const storeLatestMap = new Map();
     for (const item of latestCounts as any[]) {
-      // 处理日期，可能是字符串或Date对象
-      let dateStr: string | null = null;
-      if (item.created_date) {
-        if (typeof item.created_date === 'string') {
-          // 处理字符串格式 "2026-04-21" 或 "2026-04-21T00:00:00.000Z"
-          dateStr = item.created_date.split(' ')[0].split('T')[0];
-        } else if (item.created_date instanceof Date) {
-          // 处理Date对象，使用toISOString获取UTC日期字符串
-          // 然后提取日期部分，避免时区转换问题
-          const isoStr = item.created_date.toISOString();
-          dateStr = isoStr.split('T')[0];
-        }
-      }
+      // DATE_FORMAT返回的是字符串，直接使用
+      const dateStr = item.created_date || null;
       storeLatestMap.set(item.store_id, {
         date: dateStr,
         inventoryCountId: item.inventory_count_id
@@ -167,8 +156,9 @@ async function handleExport() {
     `);
 
     // 3. 获取每个门店的最新盘点记录
+    // 使用DATE_FORMAT直接返回字符串格式的日期，避免时区转换问题
     const latestCounts = await query(`
-      SELECT ic1.store_id, ic1.created_date, ic1.id as inventory_count_id
+      SELECT ic1.store_id, DATE_FORMAT(ic1.created_date, '%Y-%m-%d') as created_date, ic1.id as inventory_count_id
       FROM inventory_counts ic1
       WHERE ic1.id = (
         SELECT ic2.id
@@ -182,19 +172,8 @@ async function handleExport() {
     // 4. 构建门店ID到最新盘点信息的映射
     const storeLatestMap = new Map();
     for (const item of latestCounts as any[]) {
-      // 处理日期，可能是字符串或Date对象
-      let dateStr: string | null = null;
-      if (item.created_date) {
-        if (typeof item.created_date === 'string') {
-          // 处理字符串格式 "2026-04-21" 或 "2026-04-21T00:00:00.000Z"
-          dateStr = item.created_date.split(' ')[0].split('T')[0];
-        } else if (item.created_date instanceof Date) {
-          // 处理Date对象，使用toISOString获取UTC日期字符串
-          // 然后提取日期部分，避免时区转换问题
-          const isoStr = item.created_date.toISOString();
-          dateStr = isoStr.split('T')[0];
-        }
-      }
+      // DATE_FORMAT返回的是字符串，直接使用
+      const dateStr = item.created_date || null;
       storeLatestMap.set(item.store_id, {
         date: dateStr,
         inventoryCountId: item.inventory_count_id
