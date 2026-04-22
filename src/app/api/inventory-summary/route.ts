@@ -71,12 +71,10 @@ async function handleGetData() {
           // 处理字符串格式 "2026-04-21" 或 "2026-04-21T00:00:00.000Z"
           dateStr = item.created_date.split(' ')[0].split('T')[0];
         } else if (item.created_date instanceof Date) {
-          // 处理Date对象，需要考虑时区转换为中国时区
-          const date = item.created_date;
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          dateStr = `${year}-${month}-${day}`;
+          // 处理Date对象，使用toISOString获取UTC日期字符串
+          // 然后提取日期部分，避免时区转换问题
+          const isoStr = item.created_date.toISOString();
+          dateStr = isoStr.split('T')[0];
         }
       }
       storeLatestMap.set(item.store_id, {
@@ -191,12 +189,10 @@ async function handleExport() {
           // 处理字符串格式 "2026-04-21" 或 "2026-04-21T00:00:00.000Z"
           dateStr = item.created_date.split(' ')[0].split('T')[0];
         } else if (item.created_date instanceof Date) {
-          // 处理Date对象，需要考虑时区转换为中国时区
-          const date = item.created_date;
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          dateStr = `${year}-${month}-${day}`;
+          // 处理Date对象，使用toISOString获取UTC日期字符串
+          // 然后提取日期部分，避免时区转换问题
+          const isoStr = item.created_date.toISOString();
+          dateStr = isoStr.split('T')[0];
         }
       }
       storeLatestMap.set(item.store_id, {
