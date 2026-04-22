@@ -24,12 +24,15 @@ async function main() {
   try {
     // 先获取所有商品信息
     console.log('获取商品信息...');
-    const [products] = await connection.query('SELECT id, name FROM products WHERE id >= 8 AND id <= 42');
+    const [products] = await connection.query('SELECT id, name FROM products');
     const productMap = {};
+    const existingProductIds = new Set();
     products.forEach(p => {
       productMap[p.id] = p.name;
+      existingProductIds.add(p.id);
     });
-    console.log(`获取到 ${products.length} 个商品信息。\n`);
+    console.log(`获取到 ${products.length} 个商品信息。`);
+    console.log(`商品ID范围: ${Math.min(...existingProductIds)} - ${Math.max(...existingProductIds)}\n`);
 
     // 定义要导入的盘点单数据（ID使用7-12）
     const inventoryCounts = [
@@ -303,14 +306,22 @@ async function main() {
     console.log('插入库存盘点明细表数据...');
     for (const ic of inventoryCounts) {
       const details = inventoryDetails[ic.id];
+      let insertedCount = 0;
+      let skippedCount = 0;
       for (const detail of details) {
+        // 检查商品是否存在
+        if (!existingProductIds.has(detail.product_id)) {
+          skippedCount++;
+          continue; // 跳过不存在的商品
+        }
         const productName = productMap[detail.product_id] || `商品${detail.product_id}`;
         await connection.query(
           'INSERT INTO inventory_count_details (inventory_count_id, product_id, product_name, counted_quantity) VALUES (?, ?, ?, ?)',
           [ic.id, detail.product_id, productName, detail.quantity]
         );
+        insertedCount++;
       }
-      console.log(`  已插入 ${details.length} 条明细: ${ic.document_id} - ${ic.storeName}`);
+      console.log(`  已插入 ${insertedCount} 条明细: ${ic.document_id} - ${ic.storeName} (跳过 ${skippedCount} 个不存在商品)`);
     }
     console.log('明细表数据插入完成。\n');
 
