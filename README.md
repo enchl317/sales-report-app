@@ -1,6 +1,6 @@
 # 门店销售报告管理系统
 
-版本: 1.5.0
+版本: 1.6.0
 
 ## 项目概述
 
@@ -18,7 +18,9 @@
 - **员工工资管理**: 员工月度工资概览及详细统计
 - **库存盘点管理**: 门店商品库存盘点记录及历史追踪
 - **门店进货管理**: 门店商品进货单录入及历史追踪
+- **门店库存查询**: 基于盘点+进货+调拨计算门店当前库存
 - **库存汇总**: 查看所有门店最新一次库存盘点数据的汇总表，支持导出Excel
+- **各门店销售预估**: 基于库存变化（盘点+进货+调拨入-调拨出）推算各门店各SKU的销售预估
 
 ### 技术栈
 - **前端**: Next.js 14 (App Router)
@@ -98,6 +100,8 @@ scripts/
 - `/inventory-summary` - 库存汇总页面（查看所有门店最新盘点数据汇总）
 - `/store-purchase` - 门店进货单页面（录入进货数据、查看历史记录）
 - `/store-purchase/detail/[id]` - 门店进货单详情页面
+- `/store-inventory` - 门店库存查询页面（基于盘点+进货+调拨计算当前库存）
+- `/sales-estimate` - 各门店销售预估页面（基于库存变化推算销售预估）
 - `/store-transfer` - 门店调拨页面（录入调拨数据、查看历史记录）
 - `/store-transfer/detail/[id]` - 门店调拨单详情页面
 - `/monthly-threshold-management` - 门店月度销售阈值标准维护页面（新）
@@ -126,6 +130,8 @@ scripts/
 - `GET /api/inventory-summary?action=export` - 导出库存汇总Excel
 - `GET/POST /api/store-purchase` - 门店进货单管理
 - `GET/DELETE /api/store-purchase/[id]` - 获取/删除特定进货单记录
+- `GET /api/store-inventory` - 门店库存查询（基于盘点+进货+调拨计算当前库存）
+- `GET /api/sales-estimate` - 各门店销售预估（基于库存变化推算销售预估）
 - `GET/POST /api/store-transfer` - 门店调拨管理
 - `GET/DELETE /api/store-transfer/[id]` - 获取/删除特定调拨单记录
 
@@ -158,6 +164,8 @@ scripts/
 - 新增门店调拨管理功能，包含 `store_transfers` 和 `store_transfer_details` 表，提供完整的调拨单记录和历史追踪功能
 - 提供 `scripts/init-store-transfer.js` 脚本初始化门店调拨表结构
 - 调拨单据ID格式为 `MDDB+目标门店id+来源门店id+日期`
+- 新增门店库存查询功能，基于盘点+进货+调拨入-调拨出计算门店当前库存，支持变化详情展开查看
+- 新增各门店销售预估功能，基于库存变化推算各门店各SKU的销售预估，支持按日期范围查询并展示交叉表格
 
 ### 版本控制
 - 遵循语义化版本控制 (SemVer)
