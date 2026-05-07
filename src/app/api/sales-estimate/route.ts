@@ -3,130 +3,6 @@ import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// 计算某门店某日期的库存（复用store-inventory的逻辑）
-async function calculateInventory(storeId: number, targetDate: string): Promise<{ [key: number]: number }> {
-  // 1. 查找该门店在目标日期之前最新的一次盘点单
-  const latestCount: any[] = await query(
-    `SELECT ic.id, DATE_FORMAT(ic.created_date, '%Y-%m-%d') as created_date 
-     FROM inventory_counts ic 
-     WHERE ic.store_id = ? AND ic.created_date <= ? 
-     ORDER BY ic.created_date DESC, ic.id DESC 
-     LIMIT 1`,
-    [storeId, targetDate]
-  ) as any[];
-
-  const countId = latestCount.length > 0 ? latestCount[0].id : null;
-  const countDate = latestCount.length > 0 ? latestCount[0].created_date : null;
-
-  // 2. 获取该盘点单的商品库存数据
-  let countDetails: any[] = [];
-  if (countId) {
-    countDetails = await query(
-      `SELECT product_id, counted_quantity 
-       FROM inventory_count_details 
-       WHERE inventory_count_id = ?`,
-      [countId]
-    ) as any[];
-  }
-
-  const countMap: { [key: number]: number } = {};
-  countDetails.forEach((d: any) => {
-    countMap[d.product_id] = Number(d.counted_quantity);
-  });
-
-  // 3. 查找盘点日期之后到目标日期之间的进货
-  let purchaseDetails: any[] = [];
-  if (countDate) {
-    purchaseDetails = await query(
-      `SELECT spd.product_id, spd.purchase_quantity
-       FROM store_purchase_details spd
-       JOIN store_purchases sp ON spd.store_purchase_id = sp.id
-       WHERE sp.store_id = ? AND sp.created_date > ? AND sp.created_date <= ?`,
-      [storeId, countDate, targetDate]
-    ) as any[];
-  } else {
-    purchaseDetails = await query(
-      `SELECT spd.product_id, spd.purchase_quantity
-       FROM store_purchase_details spd
-       JOIN store_purchases sp ON spd.store_purchase_id = sp.id
-       WHERE sp.store_id = ? AND sp.created_date <= ?`,
-      [storeId, targetDate]
-    ) as any[];
-  }
-
-  const purchaseMap: { [key: number]: number } = {};
-  purchaseDetails.forEach((d: any) => {
-    purchaseMap[d.product_id] = (purchaseMap[d.product_id] || 0) + Number(d.purchase_quantity);
-  });
-
-  // 4. 调拨入
-  let transferInDetails: any[] = [];
-  if (countDate) {
-    transferInDetails = await query(
-      `SELECT std.product_id, std.transfer_quantity
-       FROM store_transfer_details std
-       JOIN store_transfers st ON std.transfer_id = st.id
-       WHERE st.target_store_id = ? AND st.created_date > ? AND st.created_date <= ?`,
-      [storeId, countDate, targetDate]
-    ) as any[];
-  } else {
-    transferInDetails = await query(
-      `SELECT std.product_id, std.transfer_quantity
-       FROM store_transfer_details std
-       JOIN store_transfers st ON std.transfer_id = st.id
-       WHERE st.target_store_id = ? AND st.created_date <= ?`,
-      [storeId, targetDate]
-    ) as any[];
-  }
-
-  const transferInMap: { [key: number]: number } = {};
-  transferInDetails.forEach((d: any) => {
-    transferInMap[d.product_id] = (transferInMap[d.product_id] || 0) + Number(d.transfer_quantity);
-  });
-
-  // 5. 调拨出
-  let transferOutDetails: any[] = [];
-  if (countDate) {
-    transferOutDetails = await query(
-      `SELECT std.product_id, std.transfer_quantity
-       FROM store_transfer_details std
-       JOIN store_transfers st ON std.transfer_id = st.id
-       WHERE st.source_store_id = ? AND st.created_date > ? AND st.created_date <= ?`,
-      [storeId, countDate, targetDate]
-    ) as any[];
-  } else {
-    transferOutDetails = await query(
-      `SELECT std.product_id, std.transfer_quantity
-       FROM store_transfer_details std
-       JOIN store_transfers st ON std.transfer_id = st.id
-       WHERE st.source_store_id = ? AND st.created_date <= ?`,
-      [storeId, targetDate]
-    ) as any[];
-  }
-
-  const transferOutMap: { [key: number]: number } = {};
-  transferOutDetails.forEach((d: any) => {
-    transferOutMap[d.product_id] = (transferOutMap[d.product_id] || 0) + Number(d.transfer_quantity);
-  });
-
-  // 6. 计算每个商品的当前库存 = 盘点 + 进货 + 调拨入 - 调拨出
-  const inventoryMap: { [key: number]: number } = {};
-  // 获取所有商品ID
-  const products: any[] = await query(
-    'SELECT id FROM products ORDER BY sort_order ASC, id ASC'
-  ) as any[];
-
-  products.forEach((p: any) => {
-    const base = countMap[p.id] || 0;
-    const purchase = purchaseMap[p.id] || 0;
-    const transferIn = transferInMap[p.id] || 0;
-    const transferOut = transferOutMap[p.id] || 0;
-    inventoryMap[p.id] = base + purchase + transferIn - transferOut;
-  });
-
-  return inventoryMap;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -137,27 +13,112 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: '缺少起始日期或结束日期参数' }, { status: 400 });
     }
 
-    // 1. 获取所有门店
     const stores: any[] = await query(
       'SELECT id, name, short_name, store_type FROM stores ORDER BY id ASC'
     ) as any[];
 
-    // 2. 获取所有商品
     const products: any[] = await query(
       'SELECT id, name, specification, unit FROM products ORDER BY sort_order ASC, id ASC'
     ) as any[];
 
-    // 3. 对每个门店计算起始日期和结束日期的库存
     const resultData: { [key: number]: { [key: number]: number } } = {};
 
     for (const store of stores) {
-      const startInventory = await calculateInventory(store.id, startDate);
-      const endInventory = await calculateInventory(store.id, endDate);
+      const startCountMap: { [key: number]: number } = {};
+      const endCountMap: { [key: number]: number } = {};
+      const purchaseMap: { [key: number]: number } = {};
+      const transferInMap: { [key: number]: number } = {};
+      const transferOutMap: { [key: number]: number } = {};
 
-      // 销售预估 = 结束日期库存 - 起始日期库存
+      const startCount: any[] = await query(
+        `SELECT ic.id, DATE_FORMAT(ic.created_date, '%Y-%m-%d') as created_date 
+         FROM inventory_counts ic 
+         WHERE ic.store_id = ? AND ic.created_date <= ? 
+         ORDER BY ic.created_date DESC, ic.id DESC 
+         LIMIT 1`,
+        [store.id, startDate]
+      ) as any[];
+
+      let startCountDate: string | null = null;
+      if (startCount.length > 0) {
+        startCountDate = startCount[0].created_date;
+        const startCountDetails: any[] = await query(
+          `SELECT product_id, counted_quantity 
+           FROM inventory_count_details 
+           WHERE inventory_count_id = ?`,
+          [startCount[0].id]
+        ) as any[];
+        startCountDetails.forEach((d: any) => {
+          startCountMap[d.product_id] = Number(d.counted_quantity);
+        });
+      }
+
+      const endCount: any[] = await query(
+        `SELECT ic.id, DATE_FORMAT(ic.created_date, '%Y-%m-%d') as created_date 
+         FROM inventory_counts ic 
+         WHERE ic.store_id = ? AND ic.created_date <= ? 
+         ORDER BY ic.created_date DESC, ic.id DESC 
+         LIMIT 1`,
+        [store.id, endDate]
+      ) as any[];
+
+      let endCountDate: string | null = null;
+      if (endCount.length > 0) {
+        endCountDate = endCount[0].created_date;
+        const endCountDetails: any[] = await query(
+          `SELECT product_id, counted_quantity 
+           FROM inventory_count_details 
+           WHERE inventory_count_id = ?`,
+          [endCount[0].id]
+        ) as any[];
+        endCountDetails.forEach((d: any) => {
+          endCountMap[d.product_id] = Number(d.counted_quantity);
+        });
+      }
+
+      if (startCountDate && endCountDate) {
+        const purchaseDetails: any[] = await query(
+          `SELECT spd.product_id, spd.purchase_quantity
+           FROM store_purchase_details spd
+           JOIN store_purchases sp ON spd.store_purchase_id = sp.id
+           WHERE sp.store_id = ? AND sp.created_date > ? AND sp.created_date <= ?`,
+          [store.id, startCountDate, endCountDate]
+        ) as any[];
+        purchaseDetails.forEach((d: any) => {
+          purchaseMap[d.product_id] = (purchaseMap[d.product_id] || 0) + Number(d.purchase_quantity);
+        });
+
+        const transferInDetails: any[] = await query(
+          `SELECT std.product_id, std.transfer_quantity
+           FROM store_transfer_details std
+           JOIN store_transfers st ON std.transfer_id = st.id
+           WHERE st.target_store_id = ? AND st.created_date > ? AND st.created_date <= ?`,
+          [store.id, startCountDate, endCountDate]
+        ) as any[];
+        transferInDetails.forEach((d: any) => {
+          transferInMap[d.product_id] = (transferInMap[d.product_id] || 0) + Number(d.transfer_quantity);
+        });
+
+        const transferOutDetails: any[] = await query(
+          `SELECT std.product_id, std.transfer_quantity
+           FROM store_transfer_details std
+           JOIN store_transfers st ON std.transfer_id = st.id
+           WHERE st.source_store_id = ? AND st.created_date > ? AND st.created_date <= ?`,
+          [store.id, startCountDate, endCountDate]
+        ) as any[];
+        transferOutDetails.forEach((d: any) => {
+          transferOutMap[d.product_id] = (transferOutMap[d.product_id] || 0) + Number(d.transfer_quantity);
+        });
+      }
+
       const salesEstimate: { [key: number]: number } = {};
       products.forEach((p: any) => {
-        salesEstimate[p.id] = endInventory[p.id] - startInventory[p.id];
+        const startInventory = startCountMap[p.id] || 0;
+        const endInventory = endCountMap[p.id] || 0;
+        const purchase = purchaseMap[p.id] || 0;
+        const transferIn = transferInMap[p.id] || 0;
+        const transferOut = transferOutMap[p.id] || 0;
+        salesEstimate[p.id] = startInventory + purchase + transferIn - transferOut - endInventory;
       });
 
       resultData[store.id] = salesEstimate;

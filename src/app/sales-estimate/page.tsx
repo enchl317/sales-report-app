@@ -167,7 +167,7 @@ const SalesEstimatePage: React.FC = () => {
         {hasData && (
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
             <span className="font-semibold">计算逻辑：</span>
-            <span>销售预估 = {formData.endDate}当日库存 - {formData.startDate}当日库存。当日库存基于盘点+进货+调拨入-调拨出计算。负数表示库存增加（进货/调拨多于销售）。</span>
+            <span>销售预估 = 起始盘点库存 + 期间进货 + 期间调拨入 - 期间调拨出 - 结束盘点库存。起始盘点为起始日期（含当日）之前最新盘点，结束盘点为结束日期（含当日）之前最新盘点，期间数据为两个盘点日期之间的业务数据。负数表示库存增加。</span>
           </div>
         )}
 
